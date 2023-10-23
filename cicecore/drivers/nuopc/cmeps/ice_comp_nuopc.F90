@@ -949,6 +949,7 @@ contains
     integer                    :: mon_sync   ! Sync current month
     integer                    :: day_sync   ! Sync current day
     integer                    :: tod_sync   ! Sync current time of day (sec)
+    integer                    :: nsteps     ! Number of model timeteps per coupling timestep
     character(char_len_long)   :: restart_date
     character(char_len_long)   :: restart_filename
     logical                    :: isPresent, isSet
@@ -1115,7 +1116,12 @@ contains
     !--------------------------------
 
     if(profile_memory) call ESMF_VMLogMemInfo("Entering CICE_Run : ")
-    call CICE_Run()
+
+    nsteps = INT(dt / dtime) 
+    do i=1, nsteps
+      call CICE_Run()
+    end do
+    
     if(profile_memory) call ESMF_VMLogMemInfo("Leaving CICE_Run : ")
 
     !--------------------------------
