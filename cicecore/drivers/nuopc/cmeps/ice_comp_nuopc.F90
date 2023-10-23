@@ -1118,7 +1118,7 @@ contains
     if(profile_memory) call ESMF_VMLogMemInfo("Entering CICE_Run : ")
 
     nsteps = INT(dt / dtime) 
-    do i=1, nsteps
+    do k=1, nsteps
       call CICE_Run()
     end do
     
