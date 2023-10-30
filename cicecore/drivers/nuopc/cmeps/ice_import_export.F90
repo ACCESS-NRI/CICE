@@ -1949,7 +1949,7 @@ contains
    use icepack_therm_shared, only: calculate_Tin_from_qin
    use ice_state, only: aicen, vsnon, vicen, trcrn
    ! use icepack_therm_itd, only: nt_hpnd, 
-   use icepack_tracers, only: nt_qsno, nt_hpnd, nt_sice
+   use icepack_tracers, only: nt_qsno, nt_hpnd, nt_sice, nt_qice
    use ice_arrays_column, only: apeffn
 
    ! input/output variables
