@@ -305,6 +305,7 @@ contains
 
   end subroutine ice_advertise_fields
 
+
   !==============================================================================
   subroutine ice_realize_fields(gcomp, mesh, flds_scalar_name, flds_scalar_num, rc)
     use ice_scam, only : single_column
@@ -1916,5 +1917,158 @@ contains
     if (ChkErr(rc,__LINE__,u_FILE_u)) return
 
   end subroutine State_GetFldPtr_2d
+
+
+  subroutine ice_advertise_fields_access(gcomp, importState, exportState, flds_scalar_name, rc)
+
+   ! input/output variables
+   type(ESMF_GridComp)            :: gcomp
+   type(ESMF_State)               :: importState
+   type(ESMF_State)               :: exportState
+   character(len=*) , intent(in)  :: flds_scalar_name
+   integer          , intent(out) :: rc
+
+   call fldlist_add(fldsFrIce_num , fldsFrIce, 'ia_aicen', ungridded_lbound=1, ungridded_ubound=ncat) ! from ice_state field: aicen
+   call fldlist_add(fldsFrIce_num , fldsFrIce, 'ia_snown', ungridded_lbound=1, ungridded_ubound=ncat) ! from ice_state field: vsnon
+   call fldlist_add(fldsFrIce_num , fldsFrIce, 'ia_thikn', ungridded_lbound=1, ungridded_ubound=ncat) ! from ice_state field: vicen
+
+   call fldlist_add(fldsFrIce_num , fldsFrIce, 'ia_itopt', ungridded_lbound=1, ungridded_ubound=ncat) ! from ice flux: Tn_top
+   call fldlist_add(fldsFrIce_num , fldsFrIce, 'ia_itopk', ungridded_lbound=1, ungridded_ubound=ncat) ! from ice flux: keffn_top
+   call fldlist_add(fldsFrIce_num , fldsFrIce, 'ia_pndfn', ungridded_lbound=1, ungridded_ubound=ncat) ! from icepack_shorwave: apeffn
+   call fldlist_add(fldsFrIce_num , fldsFrIce, 'ia_pndtn', ungridded_lbound=1, ungridded_ubound=ncat) ! from ice state field: trcrn
+
+  end subroutine ice_advertise_fields_access
+
+
+  subroutine ice_export_access(exportState, ailohi, rc)
+
+   use ice_scam, only : single_column
+   use ice_domain_size, only: nslyr, nilyr
+   use icepack_parameters, only: hs_min, Lfresh, rhos, ksno, cp_ice, depressT, ktherm, rhoi
+   use icepack_mushy_physics, only: liquidus_temperature_mush
+   use icepack_therm_shared, only: calculate_Tin_from_qin
+   use ice_state, only: aicen, vsnon, vicen, trcrn
+   ! use icepack_therm_itd, only: nt_hpnd, 
+   use icepack_tracers, only: nt_qsno, nt_hpnd, nt_sice
+   use ice_arrays_column, only: apeffn
+
+   ! input/output variables
+   type(ESMF_State), intent(inout) :: exportState
+   integer         , intent(out)   :: rc
+
+   real    (kind=dbl_kind) :: ailohi(nx_block,ny_block,max_blocks)
+
+   ! local variables
+   type(block)             :: this_block                           ! block information for current block
+   integer                 :: i, j, iblk, n, k                     ! indices
+   integer                 :: ilo, ihi, jlo, jhi                   ! beginning and end of physical domain
+   logical                 :: flag
+   real    (kind=dbl_kind), allocatable :: tempfld(:,:,:), tempfld1(:,:,:)
+   real    (kind=dbl_kind) :: hs1, hi1, Tmlt1, ki, rnslyr, rnilyr
+   logical (kind=log_kind), save :: first_call = .true.
+   character(len=*),parameter :: subname = 'ice_export_access'
+   !-----------------------------------------------------
+
+   rc = ESMF_SUCCESS
+   if (io_dbug > 5) call ESMF_LogWrite(subname//' called', ESMF_LOGMSG_INFO)
+
+   call icepack_warnings_flush(nu_diag)
+   if (icepack_warnings_aborted()) call abort_ice(error_message=subname, &
+       file=u_FILE_u, line=__LINE__)
+
+   ! Create a temporary field
+   allocate(tempfld(nx_block,ny_block,nblocks))
+   allocate(tempfld1(nx_block,ny_block,nblocks))
+   
+   do n = 1, ncat
+      call state_setexport(exportState, 'ia_aicen', input=aicen , lmask=tmask, ifrac=ailohi, rc=rc, index=n, ungridded_index=n)
+      call state_setexport(exportState, 'ia_snown', input=vsnon , lmask=tmask, ifrac=ailohi, rc=rc, index=n, ungridded_index=n)
+      call state_setexport(exportState, 'ia_thikn', input=vicen , lmask=tmask, ifrac=ailohi, rc=rc, index=n, ungridded_index=n)
+
+      call state_setexport(exportState, 'ia_pndfn', input=apeffn, lmask=tmask, ifrac=ailohi, rc=rc, index=n, ungridded_index=n)
+      call state_setexport(exportState, 'ia_pndtn', input=trcrn(:,:,nt_hpnd,:,:), lmask=tmask, ifrac=ailohi, rc=rc, index=n, ungridded_index=n)
+
+   end do
+
+   rnslyr = real(nslyr,kind=dbl_kind)      
+   rnilyr = real(nilyr,kind=dbl_kind)  
+
+   do n = 1, ncat
+   do iblk = 1, nblocks
+      this_block = get_block(blocks_ice(iblk),iblk)
+      ilo = this_block%ilo
+      ihi = this_block%ihi
+      jlo = this_block%jlo
+      jhi = this_block%jhi
+      do j = jlo, jhi
+         do i = ilo, ihi
+            if (aicen(i,j,n,iblk) > puny) then
+               hs1 = vsnon(i,j,n,iblk)/(aicen(i,j,n,iblk)*rnslyr)
+               if (hs1 > hs_min/rnslyr) then
+                  !snow is top layer
+                  tempfld(i,j,iblk) = (Lfresh + trcrn(i,j,nt_qsno,n,iblk) / rhos)/cp_ice
+                  tempfld1(i,j,iblk) = c2 * ksno / hs1   
+               else
+                  !ice is top layer
+                  hi1 = vicen(i,j,n,iblk)/(aicen(i,j,n,iblk)*rnilyr)
+                  if (ktherm == 2) then
+                     Tmlt1 = liquidus_temperature_mush(trcrn(i,j,nt_sice,n,iblk))
+                  else
+                     Tmlt1 = - trcrn(i,j,nt_sice,n,iblk) * depressT
+                  endif
+                  
+                  tempfld(i,j,iblk) = calculate_Tin_from_qin(trcrn(i,j,nt_qice,n,iblk),Tmlt1)
+                  ki = calculate_ki_from_Tin(tempfld(i,j,iblk), trcrn(i,j,nt_sice,n,iblk))
+                  tempfld1(i,j,iblk) = c2 * ki / hi1   
+               end if
+          endif
+         end do
+      end do
+   end do
+   call state_setexport(exportState, 'ia_itopt', input=tempfld, lmask=tmask, ifrac=ailohi, rc=rc, ungridded_index=n)
+   call state_setexport(exportState, 'ia_itopk', input=tempfld1, lmask=tmask, ifrac=ailohi, rc=rc, ungridded_index=n)
+   end do
+   
+  end subroutine ice_export_access
+
+  function calculate_ki_from_Tin (Tink, salink) &
+   result(ki)
+
+   use icepack_parameters, only: kice, conduct
+   ! use icepack_therm_bl99, only: kimin, betak
+   !
+   ! !USES:
+   !
+   ! !INPUT PARAMETERS:
+   !
+   real (kind=dbl_kind), intent(in) :: &
+   Tink   , &             ! ice layer temperature
+   salink                 ! salinity at one level
+   !
+   ! !OUTPUT PARAMETERS
+   !
+   real (kind=dbl_kind) :: &
+   ki                     ! ice conductivity
+
+
+   real (kind=dbl_kind), parameter :: &
+         betak   = 0.13_dbl_kind, & ! constant in formula for k (W m-1 ppt-1)
+         kimin   = 0.10_dbl_kind 
+   !
+   !EOP
+   !
+   if (conduct == 'MU71') then
+   ! Maykut and Untersteiner 1971 form (with Wettlaufer 1991 constants)
+      ki = kice + betak*salink/min(-puny,Tink)
+   else
+   ! Pringle et al JGR 2007 'bubbly brine'
+   ki = (2.11_dbl_kind - 0.011_dbl_kind*Tink &
+   + 0.09_dbl_kind*salink/min(-puny,Tink)) &
+   * rhoi / 917._dbl_kind
+   endif
+
+   ki = max (ki, kimin) 
+
+   end function calculate_ki_from_Tin
 
 end module ice_import_export
