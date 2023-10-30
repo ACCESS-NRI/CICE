@@ -295,6 +295,8 @@ contains
             ungridded_lbound=1, ungridded_ubound=3)
     end if
 
+    call ice_advertise_fields_access(gcomp, importState, exportState, flds_scalar_name, rc)
+
     do n = 1,fldsFrIce_num
        call NUOPC_Advertise(exportState, standardName=fldsFrIce(n)%stdname, &
             TransferOfferGeomObject='will provide', rc=rc)
@@ -1344,6 +1346,8 @@ contains
           if (ChkErr(rc,__LINE__,u_FILE_u)) return
        end do
     end if
+
+    call ice_export_access(exportState, ailohi, rc)
 
   end subroutine ice_export
 
