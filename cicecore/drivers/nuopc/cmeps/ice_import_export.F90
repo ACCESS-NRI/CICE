@@ -2034,7 +2034,7 @@ contains
   function calculate_ki_from_Tin (Tink, salink) &
    result(ki)
 
-   use icepack_parameters, only: kice, conduct
+   use icepack_parameters, only: kice, conduct, rhoi
    ! use icepack_therm_bl99, only: kimin, betak
    !
    ! !USES:
