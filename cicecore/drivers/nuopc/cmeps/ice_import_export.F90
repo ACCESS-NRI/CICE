@@ -339,6 +339,9 @@ contains
     real(dbl_kind)              :: min_mod2med_areacor_glob
     real(dbl_kind)              :: min_med2mod_areacor_glob
     character(len=*), parameter :: subname='(ice_import_export:realize_fields)'
+    character(len=100) :: tmpString
+    integer            :: ungriddedUbound(1)
+
     !---------------------------------------------------------------------------
 
     rc = ESMF_SUCCESS
@@ -423,6 +426,11 @@ contains
     end if
 #endif
 
+   call ESMF_StateGet(exportState, itemName='ia_aicen', field=lfield, rc=rc)
+   call ESMF_FieldGet(lfield, ungriddedUBound=ungriddedUbound, rc=rc)
+   write (tmpString, *) ungriddedUbound(1)
+   call ESMF_LogWrite('CICE ungridded ubound: ' // trim(tmpString), ESMF_LogMsg_Info, rc=rc)
+     
   end subroutine ice_realize_fields
 
   !==============================================================================
@@ -1931,6 +1939,8 @@ contains
    type(ESMF_State)               :: exportState
    character(len=*) , intent(in)  :: flds_scalar_name
    integer          , intent(out) :: rc
+   
+   character(len=100) :: tmpString
 
    call fldlist_add(fldsFrIce_num , fldsFrIce, 'ia_aicen', ungridded_lbound=1, ungridded_ubound=ncat) ! from ice_state field: aicen
    call fldlist_add(fldsFrIce_num , fldsFrIce, 'ia_snown', ungridded_lbound=1, ungridded_ubound=ncat) ! from ice_state field: vsnon
@@ -1940,7 +1950,9 @@ contains
    call fldlist_add(fldsFrIce_num , fldsFrIce, 'ia_itopk', ungridded_lbound=1, ungridded_ubound=ncat) ! from ice flux: keffn_top
    call fldlist_add(fldsFrIce_num , fldsFrIce, 'ia_pndfn', ungridded_lbound=1, ungridded_ubound=ncat) ! from icepack_shorwave: apeffn
    call fldlist_add(fldsFrIce_num , fldsFrIce, 'ia_pndtn', ungridded_lbound=1, ungridded_ubound=ncat) ! from ice state field: trcrn
-
+   
+   write (tmpString, *) ncat
+   call ESMF_LogWrite("CICE number of ice categories: " // trim(tmpString))
   end subroutine ice_advertise_fields_access
 
 
