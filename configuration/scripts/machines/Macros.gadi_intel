@@ -31,8 +31,6 @@ else
 endif
 LD:= $(FC)
 
-PIO_CONFIG_OPTS:= --enable-filesystem-hints=gpfs 
-
 SLIBS := $(SLIBS)
 INCLDIR := $(INCLDIR)
 
@@ -45,7 +43,6 @@ else
    INCLDIR += -I $(SPACK_NETCDF_FORTRAN_ROOT)/include
 endif
 
-#LIB_MPI := $(IMPILIBDIR)
 #LIB_PNETCDF := $(PNETCDF)/lib
 #SLIBS   += L$(LIB_PNETCDF) -lpnetcdf
 

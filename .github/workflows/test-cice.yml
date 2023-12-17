@@ -6,6 +6,10 @@ name: GHActions
 
 on:
   push:
+    branches:
+      main
+      'CICE*'
+      'ghactions*'
   pull_request:
   release:
     types:
