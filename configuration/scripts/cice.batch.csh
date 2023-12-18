@@ -58,7 +58,8 @@ else if (${queue} =~ *sl) then
 else #normal queues
   @ memuse = ( $ncores * 395 / 100 )
 endif
-cat >> ${jobfile} << EOFB
+cat >! ${jobfile} << EOFB
+#!/bin/csh
 #PBS -q ${queue}
 #PBS -P ${ICE_MACHINE_PROJ}
 #PBS -N ${ICE_CASENAME}
@@ -67,8 +68,9 @@ cat >> ${jobfile} << EOFB
 #PBS -l mem=${memuse}gb
 #PBS -l walltime=${batchtime}
 #PBS -j oe 
-#PBS -W umask=022
+#PBS -W umask=003
 #PBS -o ${ICE_CASEDIR}
+module use `echo ${MODULEPATH} | sed 's/:/ /g'` #copy the users modules
 EOFB
 
 else if (${ICE_MACHINE} =~ gust*) then
