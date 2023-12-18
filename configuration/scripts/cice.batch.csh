@@ -58,8 +58,7 @@ else if (${queue} =~ *sl) then
 else #normal queues
   @ memuse = ( $ncores * 395 / 100 )
 endif
-cat >! ${jobfile} << EOFB
-#!/bin/csh
+cat >> ${jobfile} << EOFB
 #PBS -q ${queue}
 #PBS -P ${ICE_MACHINE_PROJ}
 #PBS -N ${ICE_CASENAME}
@@ -70,6 +69,7 @@ cat >! ${jobfile} << EOFB
 #PBS -j oe 
 #PBS -W umask=003
 #PBS -o ${ICE_CASEDIR}
+source /etc/profile.d/modules.csh
 module use `echo ${MODULEPATH} | sed 's/:/ /g'` #copy the users modules
 EOFB
 
