@@ -16,6 +16,7 @@ module ice_import_export
   use ice_flux           , only : flat, fsens, flwout, evap, fswabs, fhocn, fswthru
   use ice_flux           , only : fswthru_vdr, fswthru_vdf, fswthru_idr, fswthru_idf
   use ice_flux           , only : send_i2x_per_cat, fswthrun_ai
+  use ice_flux           , only : flatn_f, fcondtopn_f, fsurfn_f
   use ice_flux_bgc       , only : faero_atm, faero_ocn
   use ice_flux_bgc       , only : fiso_atm, fiso_ocn, fiso_evap
   use ice_flux_bgc       , only : Qa_iso, Qref_iso, HDO_ocn, H2_18O_ocn, H2_16O_ocn
@@ -216,6 +217,8 @@ contains
             ungridded_ubound=25)
     end if
 
+    call ice_advertise_fields_access_import(gcomp, importState, exportState, flds_scalar_name, rc)
+
     do n = 1,fldsToIce_num
        call NUOPC_Advertise(importState, standardName=fldsToIce(n)%stdname, &
             TransferOfferGeomObject='will provide', rc=rc)
@@ -295,7 +298,7 @@ contains
             ungridded_lbound=1, ungridded_ubound=3)
     end if
 
-    call ice_advertise_fields_access(gcomp, importState, exportState, flds_scalar_name, rc)
+    call ice_advertise_fields_access_export(gcomp, importState, exportState, flds_scalar_name, rc)
 
     do n = 1,fldsFrIce_num
        call NUOPC_Advertise(exportState, standardName=fldsFrIce(n)%stdname, &
@@ -436,6 +439,9 @@ contains
   !==============================================================================
   subroutine ice_import( importState, rc )
 
+    use icepack_tracers, only: nt_Tsfc
+    use icepack_parameters, only: Lsub
+
     ! input/output variables
     type(ESMF_State) , intent(in)  :: importState
     integer          , intent(out) :: rc
@@ -574,6 +580,38 @@ contains
     endif
 
     ! now fill in the ice internal data types
+    do i=1,ncat
+      call state_getimport(importState, 'sublim', output=flatn_f, index=i, rc=rc)
+      call state_getimport(importState, 'botmelt', output=fcondtopn_f, index=i, rc=rc)
+      call state_getimport(importState, 'topmelt', output=fsurfn_f, index=i, rc=rc)
+      call state_getimport(importState, 'tstar_sice', output=trcrn(:,:,nt_Tsfc,:,:), index=i, rc=rc)
+    end do
+
+    !$OMP PARALLEL DO PRIVATE(iblk,i,j)
+    do iblk = 1, nblocks
+      do j = 1,ny_block
+         do i = 1,nx_block
+            do k=1,ncat
+               flatn_f(i,j,k,iblk) = -flatn_f(i,j,k,iblk) * Lsub ! convert to W m-2
+               fsurfn_f(i,j,k,iblk) = fsurfn_f(i,j,k,iblk) +  fcondtopn_f(i,j,k,iblk)
+               trcrn(i,j,nt_Tsfc,k,iblk) = max(trcrn(i,j,nt_Tsfc,k,iblk), -60.0)
+               trcrn(i,j,nt_Tsfc,k,iblk) = min(trcrn(i,j,nt_Tsfc,k,iblk), 0.0)
+            end do
+         end do
+      end do
+   end do
+   !$OMP END PARALLEL DO
+
+    ! flatn_f = - Foxx_evap(i,j,cat,k) * Lsub !! latent heat - 
+    ! fcondtopn_f = botmelt 
+    ! fsurfn_f   (:,:,cat,:) = topmelt(:,:,cat,:) + botmelt(:,:,cat,:)
+      ! if (um_tsfice(i,j,cat,k) > 0.0) then
+   !  trcrn(i,j,nt_Tsfc,cat,k) = 0.0 
+   ! else if (um_tsfice(i,j,cat,k) < -60.0) then
+   !   trcrn(i,j,nt_Tsfc,cat,k) = -60.0 
+   ! else
+   !   trcrn(i,j,nt_Tsfc,cat,k) = um_tsfice(i,j,cat,k)
+   ! endif
 
     !$OMP PARALLEL DO PRIVATE(iblk,i,j)
     do iblk = 1, nblocks
@@ -593,6 +631,9 @@ contains
              flw  (i,j,iblk)         = aflds(i,j,14,iblk)
              frain(i,j,iblk)         = aflds(i,j,15,iblk)
              fsnow(i,j,iblk)         = aflds(i,j,16,iblk)
+             ! strax !! windstress - already handled, come back to this
+             ! stray !! windstress
+             
           end do
        end do
     end do
@@ -1356,8 +1397,75 @@ contains
     end if
 
     call ice_export_access(exportState, ailohi, rc)
+    call log_state_info(exportState, fldsFrIce, fldsFrIce_num)
 
   end subroutine ice_export
+
+  subroutine log_state_info(state, field_list, field_num)
+   type(ESMF_State)            :: state
+   type(fld_list_type)         :: field_list(:)
+   integer                     :: field_num
+   
+   ! local variables
+   type(ESMF_Field)            :: field
+   character(len=320)          :: msgString, tmpString
+   character(len=20)           :: fld_name
+   integer                     :: i, rc, j, k, n
+   real(ESMF_KIND_R8), pointer :: fld_ptr1(:), fld_ptr2(:, :)
+   real :: lo, hi
+   real(ESMF_KIND_R8), pointer :: esmf_arr(:)
+   
+   do i = 1,field_num
+      write (tmpString, *) i
+      call ESMF_LogWrite('i: ' // trim(tmpString) // ' - ' // trim(field_list(i)%stdname), ESMF_LOGMSG_DEBUG, rc=rc)    
+
+      call ESMF_StateGet(state, itemName=trim(field_list(i)%stdname), field=field)
+     
+      if (field_list(i)%stdname == 'cpl_scalars') cycle
+
+      if (NUOPC_IsConnected(state, fieldName=trim(field_list(i)%stdname))) then
+
+         if (field_list(i)%ungridded_lbound > 0 .and. field_list(i)%ungridded_ubound > 0) then 
+            call ESMF_FieldGet(field, farrayptr=fld_ptr2)
+            lo = minval(fld_ptr2)
+            hi = maxval(fld_ptr2)
+            write (tmpString, *) nan_check(pack(fld_ptr2, .true.))
+            call ESMF_LogWrite(trim(field_list(i)%stdname) // ' any nans: ' // trim(tmpString), ESMF_LOGMSG_DEBUG, rc=rc)
+
+         else
+            call ESMF_FieldGet(field, farrayptr=fld_ptr1)
+            lo = minval(fld_ptr1)
+            hi = maxval(fld_ptr1)
+            write (tmpString, *) nan_check(fld_ptr1)
+            call ESMF_LogWrite(trim(field_list(i)%stdname) // ' any nans: ' // trim(tmpString), ESMF_LOGMSG_DEBUG, rc=rc)
+
+      end if
+
+      write (tmpString, *) lo
+      call ESMF_LogWrite(trim(field_list(i)%stdname) // ' min: ' // trim(tmpString), ESMF_LOGMSG_DEBUG, rc=rc)
+      write (tmpString, *) hi
+      call ESMF_LogWrite(trim(field_list(i)%stdname) // ' max: ' // trim(tmpString), ESMF_LOGMSG_DEBUG, rc=rc)
+   
+     end if
+   
+   end do
+
+ end subroutine log_state_info
+
+ logical function nan_check(arr)
+    use, intrinsic :: ieee_arithmetic
+    real(ESMF_KIND_R8), intent(in)    :: arr(:)
+
+    integer :: i
+
+    nan_check = .false.
+
+    do i=1,size(arr)
+        nan_check = nan_check .or. ieee_is_nan(arr(i)) !.not.(arr(i) == arr(i))
+    end do
+    return
+
+  end function nan_check
 
   !===============================================================================
   subroutine fldlist_add(num, fldlist, stdname, ungridded_lbound, ungridded_ubound)
@@ -1931,7 +2039,29 @@ contains
   end subroutine State_GetFldPtr_2d
 
 
-  subroutine ice_advertise_fields_access(gcomp, importState, exportState, flds_scalar_name, rc)
+  subroutine ice_advertise_fields_access_import(gcomp, importState, exportState, flds_scalar_name, rc)
+
+   ! input/output variables
+   type(ESMF_GridComp)            :: gcomp
+   type(ESMF_State)               :: importState
+   type(ESMF_State)               :: exportState
+   character(len=*) , intent(in)  :: flds_scalar_name
+   integer          , intent(out) :: rc
+   
+   character(len=100) :: tmpString
+
+   call fldlist_add(fldsToIce_num, fldsToIce, 'pen_rad', ungridded_lbound=1, ungridded_ubound=ncat)   
+   call fldlist_add(fldsToIce_num, fldsToIce, 'topmelt', ungridded_lbound=1, ungridded_ubound=ncat)   
+   call fldlist_add(fldsToIce_num, fldsToIce, 'botmelt', ungridded_lbound=1, ungridded_ubound=ncat)   
+   call fldlist_add(fldsToIce_num, fldsToIce, 'tstar_sice', ungridded_lbound=1, ungridded_ubound=ncat)   
+   call fldlist_add(fldsToIce_num, fldsToIce, 'sublim', ungridded_lbound=1, ungridded_ubound=ncat)          
+   
+   write (tmpString, *) ncat
+   call ESMF_LogWrite("CICE number of ice categories: " // trim(tmpString))
+  end subroutine ice_advertise_fields_access_import
+
+
+  subroutine ice_advertise_fields_access_export(gcomp, importState, exportState, flds_scalar_name, rc)
 
    ! input/output variables
    type(ESMF_GridComp)            :: gcomp
@@ -1950,10 +2080,10 @@ contains
    call fldlist_add(fldsFrIce_num , fldsFrIce, 'ia_itopk', ungridded_lbound=1, ungridded_ubound=ncat) ! from ice flux: keffn_top
    call fldlist_add(fldsFrIce_num , fldsFrIce, 'ia_pndfn', ungridded_lbound=1, ungridded_ubound=ncat) ! from icepack_shorwave: apeffn
    call fldlist_add(fldsFrIce_num , fldsFrIce, 'ia_pndtn', ungridded_lbound=1, ungridded_ubound=ncat) ! from ice state field: trcrn
-   
+
    write (tmpString, *) ncat
    call ESMF_LogWrite("CICE number of ice categories: " // trim(tmpString))
-  end subroutine ice_advertise_fields_access
+  end subroutine ice_advertise_fields_access_export
 
 
   subroutine ice_export_access(exportState, ailohi, rc)
@@ -1979,10 +2109,11 @@ contains
    integer                 :: i, j, iblk, n, k                     ! indices
    integer                 :: ilo, ihi, jlo, jhi                   ! beginning and end of physical domain
    logical                 :: flag
-   real    (kind=dbl_kind), allocatable :: tempfld(:,:,:), tempfld1(:,:,:)
+   real    (kind=dbl_kind), allocatable :: tempfld(:,:,:), tempfld1(:,:,:), ki_fld(:,:,:,:), hi1_fld(:,:,:,:)
    real    (kind=dbl_kind) :: hs1, hi1, Tmlt1, ki, rnslyr, rnilyr
    logical (kind=log_kind), save :: first_call = .true.
    character(len=*),parameter :: subname = 'ice_export_access'
+   character(len=200) :: tmpString
    !-----------------------------------------------------
 
    rc = ESMF_SUCCESS
@@ -1995,6 +2126,8 @@ contains
    ! Create a temporary field
    allocate(tempfld(nx_block,ny_block,nblocks))
    allocate(tempfld1(nx_block,ny_block,nblocks))
+   allocate(ki_fld(nx_block,ny_block,ncat,nblocks))
+   allocate(hi1_fld(nx_block,ny_block,ncat,nblocks))
    
    do n = 1, ncat
       call state_setexport(exportState, 'ia_aicen', input=aicen , lmask=tmask, ifrac=ailohi, rc=rc, index=n, ungridded_index=n)
@@ -2036,8 +2169,10 @@ contains
                   tempfld(i,j,iblk) = calculate_Tin_from_qin(trcrn(i,j,nt_qice,n,iblk),Tmlt1)
                   ki = calculate_ki_from_Tin(tempfld(i,j,iblk), trcrn(i,j,nt_sice,n,iblk))
                   tempfld1(i,j,iblk) = c2 * ki / hi1   
+                  ki_fld(i,j,n,iblk) = tempfld(i,j,iblk) 
+                  hi1_fld(i,j,n,iblk) = Tmlt1
                end if
-          endif
+            endif
          end do
       end do
    end do
