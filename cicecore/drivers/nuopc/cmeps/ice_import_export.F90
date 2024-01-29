@@ -2134,7 +2134,7 @@ contains
       call state_setexport(exportState, 'ia_snown', input=vsnon , lmask=tmask, ifrac=ailohi, rc=rc, index=n, ungridded_index=n)
       call state_setexport(exportState, 'ia_thikn', input=vicen , lmask=tmask, ifrac=ailohi, rc=rc, index=n, ungridded_index=n)
 
-      call state_setexport(exportState, 'ia_pndfn', input=apeffn, lmask=tmask, ifrac=ailohi, rc=rc, index=n, ungridded_index=n)
+      ! call state_setexport(exportState, 'ia_pndfn', input=apeffn, lmask=tmask, ifrac=ailohi, rc=rc, index=n, ungridded_index=n)
       call state_setexport(exportState, 'ia_pndtn', input=trcrn(:,:,nt_hpnd,:,:), lmask=tmask, ifrac=ailohi, rc=rc, index=n, ungridded_index=n)
 
    end do
