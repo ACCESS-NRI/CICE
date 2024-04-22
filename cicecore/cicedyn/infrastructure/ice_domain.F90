@@ -22,7 +22,8 @@
    use ice_broadcast, only: broadcast_scalar, broadcast_array
    use ice_blocks, only: block, get_block, create_blocks, nghost, &
        nblocks_x, nblocks_y, nblocks_tot, nx_block, ny_block, debug_blocks
-   use ice_distribution, only: distrb
+! mli: proc_decomposition imported
+   use ice_distribution, only: distrb,proc_decomposition
    use ice_boundary, only: ice_halo
    use ice_exit, only: abort_ice
    use ice_fileunits, only: nu_nml, nml_filename, nu_diag, &
@@ -90,6 +91,10 @@
     integer (int_kind) :: &
        nprocs                ! num of processors
 
+!mli: update optimal 2d processors
+    integer (int_kind) :: &
+       nprocs_x_mli,nprocs_y_mli ! num of processors after
+                                 ! finding optimal 2d processor
 !***********************************************************************
 
  contains
@@ -216,10 +221,16 @@
    call broadcast_scalar(maskhalo_bound,    master_task)
    call broadcast_scalar(add_mpi_barriers,  master_task)
    call broadcast_scalar(debug_blocks,      master_task)
+
+! mli: update nprocs_x and nprocs_y
+   call proc_decomposition(nprocs, nprocs_x_mli, nprocs_y_mli)
+
    if (my_task == master_task) then
      if (max_blocks < 1) then
-       max_blocks=( ((nx_global-1)/block_size_x + 1) *         &
-                    ((ny_global-1)/block_size_y + 1) - 1) / nprocs + 1
+!       max_blocks=( ((nx_global-1)/block_size_x + 1) *         &
+!                    ((ny_global-1)/block_size_y + 1) - 1) / nprocs + 1
+       max_blocks=((nx_global-1)/block_size_x/nprocs_x_mli+1) * &
+                  ((ny_global-1)/block_size_y/nprocs_y_mli+1)
        max_blocks=max(1,max_blocks)
        write(nu_diag,'(/,a52,i6,/)') &
          '(ice_domain): max_block < 1: max_block estimated to ',max_blocks
