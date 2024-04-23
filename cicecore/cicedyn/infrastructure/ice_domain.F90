@@ -204,6 +204,14 @@
 
    endif
 
+   if (nprocs ~= -1 ) then
+      if (my_task == master_task) then
+         write(nu_diag,*) subname//' WARNING: nprocs is deprecated, please remove from namelist'
+      endif
+   endif
+
+   nprocs = get_num_procs()
+
    call broadcast_scalar(nprocs,            master_task)
    call broadcast_scalar(processor_shape,   master_task)
    call broadcast_scalar(distribution_type, master_task)
@@ -242,16 +250,6 @@
       !*** domain size zero or negative
       !***
       call abort_ice(subname//' ERROR: Invalid domain: size < 1', file=__FILE__, line=__LINE__) ! no domain
-   else if (nprocs /= get_num_procs()) then
-      !***
-      !*** input nprocs does not match system (eg MPI) request
-      !***
-#if (defined CESMCOUPLED)
-      nprocs = get_num_procs()
-#else
-      write(nu_diag,*) subname,' ERROR: nprocs, get_num_procs = ',nprocs,get_num_procs()
-      call abort_ice(subname//' ERROR: Input nprocs not same as system request', file=__FILE__, line=__LINE__)
-#endif
    else if (nghost < 1) then
       !***
       !*** must have at least 1 layer of ghost cells
