@@ -1289,7 +1289,9 @@ contains
        end do
     end if
 
-    call ice_export_access(exportState, ailohi, rc)
+    if (.not. first_call) then
+      call ice_export_access(exportState, ailohi, rc)
+    end if
     call log_state_info(exportState, fldsFrIce, fldsFrIce_num, exportState)
 
   end subroutine ice_export
@@ -1728,9 +1730,7 @@ contains
     if (present(ungridded_index)) then
        call state_getfldptr(state, trim(fldname), dataPtr2d, rc)
        if (ChkErr(rc,__LINE__,u_FILE_u)) return
-       if (ungridded_index == 1) then
-          dataptr2d(:,:) = c0
-       end if
+       dataptr2d(:,:) = c0
        n = 0
        do iblk = 1, nblocks
           this_block = get_block(blocks_ice(iblk),iblk)
@@ -1833,9 +1833,11 @@ contains
     if (present(ungridded_index)) then
        call state_getfldptr(state, trim(fldname), dataPtr2d, rc)
        if (ChkErr(rc,__LINE__,u_FILE_u)) return
+       dataPtr2d(:, :) = c0
     else
        call state_getfldptr(state, trim(fldname), dataPtr1d, rc)
        if (ChkErr(rc,__LINE__,u_FILE_u)) return
+       dataPtr1d(:) = c0
     end if
 
     n = 0
