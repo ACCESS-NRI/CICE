@@ -576,7 +576,7 @@ contains
          do i = 1,nx_block
             do k=1,ncat
                flatn_f(i,j,k,iblk) = -flatn_f(i,j,k,iblk) * Lsub ! convert to W m-2
-               fsurfn_f(i,j,k,iblk) = fsurfn_f(i,j,k,iblk) !+  fcondtopn_f(i,j,k,iblk)
+               fsurfn_f(i,j,k,iblk) = fsurfn_f(i,j,k,iblk) +  fcondtopn_f(i,j,k,iblk)
 
                if (trcrn(i,j,nt_Tsfc,k,iblk) > 200.0) then
                   trcrn(i,j,nt_Tsfc,k,iblk) = trcrn(i,j,nt_Tsfc,k,iblk) - Tffresh
