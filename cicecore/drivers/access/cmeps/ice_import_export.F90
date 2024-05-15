@@ -424,6 +424,7 @@ contains
 
     use icepack_tracers, only: nt_Tsfc
     use icepack_parameters, only: Lsub
+    use ice_state, only: aicen
 
     ! input/output variables
     type(ESMF_State) , intent(in)  :: importState
@@ -583,6 +584,12 @@ contains
                end if
                trcrn(i,j,nt_Tsfc,k,iblk) = max(trcrn(i,j,nt_Tsfc,k,iblk), -60.0)
                trcrn(i,j,nt_Tsfc,k,iblk) = min(trcrn(i,j,nt_Tsfc,k,iblk), 0.0)
+               
+               ! if (aicen(i,j,k,iblk) > puny) then
+               !    fsurfn_f(i,j,k,iblk) = fsurfn_f(i,j,k,iblk) / aicen(i,j,k,iblk)
+               !    flatn_f(i,j,k,iblk) = flatn_f(i,j,k,iblk) / aicen(i,j,k,iblk)
+               !    fcondtopn_f(i,j,k,iblk) = fcondtopn_f(i,j,k,iblk) / aicen(i,j,k,iblk)
+               ! end if
             end do
          end do
       end do
@@ -1730,7 +1737,7 @@ contains
     if (present(ungridded_index)) then
        call state_getfldptr(state, trim(fldname), dataPtr2d, rc)
        if (ChkErr(rc,__LINE__,u_FILE_u)) return
-       dataptr2d(:,:) = c0
+       dataptr2d(ungridded_index,:) = c0
        n = 0
        do iblk = 1, nblocks
           this_block = get_block(blocks_ice(iblk),iblk)
@@ -1833,7 +1840,7 @@ contains
     if (present(ungridded_index)) then
        call state_getfldptr(state, trim(fldname), dataPtr2d, rc)
        if (ChkErr(rc,__LINE__,u_FILE_u)) return
-       dataPtr2d(:, :) = c0
+       dataPtr2d(ungridded_index, :) = c0
     else
        call state_getfldptr(state, trim(fldname), dataPtr1d, rc)
        if (ChkErr(rc,__LINE__,u_FILE_u)) return
@@ -2063,11 +2070,11 @@ contains
                      Tmlt1 = - trcrn(i,j,nt_sice,n,iblk) * depressT
                   endif
                   
-                  tempfld(i,j,iblk) = calculate_Tin_from_qin(trcrn(i,j,nt_qice,n,iblk),Tmlt1)
+                  tempfld(i,j,iblk) = calculate_Tin_from_qin(trcrn(i,j,nt_qice,n,iblk),Tmlt1)  
                   ki = calculate_ki_from_Tin(tempfld(i,j,iblk), trcrn(i,j,nt_sice,n,iblk))
-                  tempfld1(i,j,iblk) = (c2 * ki / hi1) 
-                  ki_fld(i,j,n,iblk) = tempfld(i,j,iblk) 
-                  hi1_fld(i,j,n,iblk) = Tmlt1
+                  tempfld1(i,j,iblk) = (c2 * ki / hi1) * aicen(i,j,n,iblk)
+                  tempfld(i,j,iblk) = tempfld(i,j,iblk) * aicen(i,j,n,iblk)
+                  
                end if
             endif
          end do
