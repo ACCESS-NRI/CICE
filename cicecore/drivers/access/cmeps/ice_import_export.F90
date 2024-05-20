@@ -2152,8 +2152,7 @@ contains
    ! Create a temporary field
    allocate(tempfld(nx_block,ny_block,nblocks))
    allocate(tempfld1(nx_block,ny_block,nblocks))
-   allocate(ki_fld(nx_block,ny_block,ncat,nblocks))
-   allocate(hi1_fld(nx_block,ny_block,ncat,nblocks))
+   
    
    do n = 1, ncat
       call state_setexport(exportState, 'ia_aicen', input=aicen , lmask=tmask, ifrac=ailohi, rc=rc, index=n, ungridded_index=n)
@@ -2175,7 +2174,7 @@ contains
       jhi = this_block%jhi
       do j = jlo, jhi
          do i = ilo, ihi
-            if (aicen(i,j,n,iblk) > puny) then
+            if (aicen(i,j,n,iblk) > c0) then
                hs1 = vsnon(i,j,n,iblk)/(aicen(i,j,n,iblk)*rnslyr)
                if (hs1 > hs_min/rnslyr) then
                   !snow is top layer
@@ -2194,8 +2193,11 @@ contains
                   ki = calculate_ki_from_Tin(tempfld(i,j,iblk), trcrn(i,j,nt_sice,n,iblk))
                   tempfld1(i,j,iblk) = (c2 * ki / hi1) * aicen(i,j,n,iblk)
                   tempfld(i,j,iblk) = tempfld(i,j,iblk) * aicen(i,j,n,iblk)
-                  
+               
                end if
+            else
+               tempfld1(i,j,iblk) = 0.0
+               tempfld(i,j,iblk) = 0.0
             endif
          end do
       end do
