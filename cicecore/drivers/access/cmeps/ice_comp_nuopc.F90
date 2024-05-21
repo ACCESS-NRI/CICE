@@ -19,7 +19,7 @@ module ice_comp_nuopc
   use ice_shr_methods    , only : chkerr, state_setscalar, state_getscalar, state_diagnose, alarmInit
   use ice_shr_methods    , only : get_component_instance, state_flddebug
 
-  use ice_import_export  , only : ice_import, ice_export, ice_advertise_fields, ice_realize_fields
+  use ice_import_export  , only : ice_import, ice_export, ice_advertise_fields, ice_realize_fields, ice_increment_fluxes, ice_zero_fluxes
   use ice_domain_size    , only : nx_global, ny_global
   use ice_grid           , only : grid_format, init_grid2
   use ice_communicate    , only : init_communicate, my_task, master_task, mpi_comm_ice
