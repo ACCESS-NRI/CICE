@@ -54,6 +54,8 @@ module ice_import_export
   public  :: ice_realize_fields
   public  :: ice_import
   public  :: ice_export
+  public  :: ice_increment_fluxes 
+  public  :: ice_zero_fluxes 
 
   private :: fldlist_add
   private :: fldlist_realize
@@ -589,6 +591,10 @@ contains
                !    fsurfn_f(i,j,k,iblk) = fsurfn_f(i,j,k,iblk) / aicen(i,j,k,iblk)
                !    flatn_f(i,j,k,iblk) = flatn_f(i,j,k,iblk) / aicen(i,j,k,iblk)
                !    fcondtopn_f(i,j,k,iblk) = fcondtopn_f(i,j,k,iblk) / aicen(i,j,k,iblk)
+               ! else
+               !    fsurfn_f(i,j,k,iblk) = 0.0
+               !    flatn_f(i,j,k,iblk) = 0.0
+               !    fcondtopn_f(i,j,k,iblk) = 0.0
                ! end if
             end do
          end do
@@ -1177,20 +1183,20 @@ contains
          areacor=mod2med_areacor, rc=rc)
     if (ChkErr(rc,__LINE__,u_FILE_u)) return
 
-    ! flux of heat exchange with ocean
-    call state_setexport(exportState, 'net_heat_flx_to_ocn' , input=fhocn, lmask=tmask, ifrac=ailohi, &
-         areacor=mod2med_areacor, rc=rc)
-    if (ChkErr(rc,__LINE__,u_FILE_u)) return
+   !  ! flux of heat exchange with ocean
+   !  call state_setexport(exportState, 'net_heat_flx_to_ocn' , input=fhocn, lmask=tmask, ifrac=ailohi, &
+   !       areacor=mod2med_areacor, rc=rc)
+   !  if (ChkErr(rc,__LINE__,u_FILE_u)) return
 
-    ! flux fresh water to ocean (h2o flux from melting)
-    call state_setexport(exportState, 'mean_fresh_water_to_ocean_rate' , input=fresh, lmask=tmask, ifrac=ailohi, &
-         areacor=mod2med_areacor, rc=rc)
-    if (ChkErr(rc,__LINE__,u_FILE_u)) return
+   !  ! flux fresh water to ocean (h2o flux from melting)
+   !  call state_setexport(exportState, 'mean_fresh_water_to_ocean_rate' , input=fresh, lmask=tmask, ifrac=ailohi, &
+   !       areacor=mod2med_areacor, rc=rc)
+   !  if (ChkErr(rc,__LINE__,u_FILE_u)) return
 
-    ! flux of salt to ocean (salt flux from melting)
-    call state_setexport(exportState, 'mean_salt_rate' , input=fsalt, lmask=tmask, ifrac=ailohi, &
-         areacor=mod2med_areacor, rc=rc)
-    if (ChkErr(rc,__LINE__,u_FILE_u)) return
+   !  ! flux of salt to ocean (salt flux from melting)
+   !  call state_setexport(exportState, 'mean_salt_rate' , input=fsalt, lmask=tmask, ifrac=ailohi, &
+   !       areacor=mod2med_areacor, rc=rc)
+   !  if (ChkErr(rc,__LINE__,u_FILE_u)) return
 
     ! stress n i/o zonal
     call state_setexport(exportState, 'stress_on_ocn_ice_zonal' , input=tauxo, lmask=tmask, ifrac=ailohi, &
@@ -1302,6 +1308,69 @@ contains
     call log_state_info(exportState, fldsFrIce, fldsFrIce_num, exportState)
 
   end subroutine ice_export
+
+
+  subroutine ice_zero_fluxes( state, rc )
+   type(ESMF_State), intent(inout) :: state
+   integer, intent(out)   :: rc
+
+   real(kind=dbl_kind), pointer :: fhocn_ptr(:), fresh_ptr(:), fsalt_ptr(:)
+   character(len=*) , parameter :: subname='(ice_import_export:ice_zero_fluxes)'
+   ! ----------------------------------------------
+
+   rc = ESMF_SUCCESS
+
+   call state_getfldptr(state, 'net_heat_flx_to_ocn', fhocn_ptr, rc)
+   call state_getfldptr(state, 'mean_fresh_water_to_ocean_rate', fresh_ptr, rc)
+   call state_getfldptr(state, 'mean_salt_rate', fsalt_ptr, rc)
+
+   fhocn_ptr(:) = 0.0
+   fresh_ptr(:) = 0.0
+   fsalt_ptr(:) = 0.0
+  
+  end subroutine ice_zero_fluxes
+
+
+  subroutine ice_increment_fluxes( state, nsteps, rc )
+
+   type(ESMF_State), intent(inout) :: state
+   integer, intent(in)   :: nsteps
+   integer, intent(out)   :: rc
+
+   ! local variables
+   type(block)                  :: this_block            ! block information for current block
+   integer                      :: ilo, ihi, jlo, jhi    ! beginning and end of physical domain
+   integer                      :: i, j, iblk, n, i1, j1 ! incides
+   real(kind=dbl_kind), pointer :: fhocn_ptr(:), fresh_ptr(:), fsalt_ptr(:)
+   character(len=*) , parameter :: subname='(ice_import_export:ice_increment_fluxes)'
+   ! ----------------------------------------------
+
+   rc = ESMF_SUCCESS
+
+   call state_getfldptr(state, 'net_heat_flx_to_ocn', fhocn_ptr, rc)
+   call state_getfldptr(state, 'mean_fresh_water_to_ocean_rate', fresh_ptr, rc)
+   call state_getfldptr(state, 'mean_salt_rate', fsalt_ptr, rc)
+
+   n = 0
+   do iblk = 1, nblocks
+      this_block = get_block(blocks_ice(iblk),iblk)
+      ilo = this_block%ilo
+      ihi = this_block%ihi
+      jlo = this_block%jlo
+      jhi = this_block%jhi
+      do j = jlo, jhi
+         do i = ilo, ihi
+            n = n+1
+            if (aice(i,j,iblk) > c0) then
+               fhocn_ptr(n) = fhocn_ptr(n) + aice(i,j,iblk) * fhocn(i,j,iblk) * mod2med_areacor(n) / nsteps
+               fresh_ptr(n) = fresh_ptr(n) + aice(i,j,iblk) * fresh(i,j,iblk) * mod2med_areacor(n) / nsteps
+               fsalt_ptr(n) = fsalt_ptr(n) + aice(i,j,iblk) * fsalt(i,j,iblk) * mod2med_areacor(n) / nsteps
+            end if
+         end do
+      end do
+   end do
+
+  end subroutine ice_increment_fluxes
 
   subroutine log_state_info(state, field_list, field_num, exportState)
    type(ESMF_State)            :: state, exportState

@@ -1118,9 +1118,11 @@ contains
 
     if(profile_memory) call ESMF_VMLogMemInfo("Entering CICE_Run : ")
     call ESMF_TimeIntervalGet(timeStep, s=cpl_dt)
+    call ice_zero_fluxes(exportState, rc)
     nsteps = INT(cpl_dt / dt) 
     do k=1, nsteps
       call CICE_Run()
+      call ice_increment_fluxes(exportState, nsteps, rc)
     end do
     
     if(profile_memory) call ESMF_VMLogMemInfo("Leaving CICE_Run : ")
