@@ -1004,11 +1004,11 @@ contains
     !---------------------------------
 
     ! Zero out fields with tmask for proper coupler accumulation in ice free areas
-    if (first_call .or. .not.single_column) then
-       call state_reset(exportState, c0, rc)
-       if (ChkErr(rc,__LINE__,u_FILE_u)) return
-       first_call = .false.
-    endif
+    !  if (first_call .or. .not.single_column) then
+   !     call state_reset(exportState, c0, rc)
+   !     if (ChkErr(rc,__LINE__,u_FILE_u)) return
+   !     first_call = .false.
+   !  endif
 
     ! Create a temporary field
     allocate(tempfld(nx_block,ny_block,nblocks))
@@ -1304,6 +1304,7 @@ contains
 
     if (.not. first_call) then
       call ice_export_access(exportState, ailohi, rc)
+      first_call = .false.
     end if
     call log_state_info(exportState, fldsFrIce, fldsFrIce_num, exportState)
 
@@ -2086,7 +2087,6 @@ contains
    logical                 :: flag
    real    (kind=dbl_kind), allocatable :: tempfld(:,:,:), tempfld1(:,:,:), ki_fld(:,:,:,:), hi1_fld(:,:,:,:)
    real    (kind=dbl_kind) :: hs1, hi1, Tmlt1, ki, rnslyr, rnilyr
-   logical (kind=log_kind), save :: first_call = .true.
    character(len=*),parameter :: subname = 'ice_export_access'
    character(len=200) :: tmpString
    !-----------------------------------------------------
