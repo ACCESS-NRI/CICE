@@ -17,9 +17,9 @@ module ice_comp_nuopc
   use NUOPC_Model        , only : NUOPC_ModelGet, SetVM
   use ice_constants      , only : ice_init_constants, c0
   use ice_shr_methods    , only : chkerr, state_setscalar, state_getscalar, state_diagnose, alarmInit
-  use ice_shr_methods    , only : get_component_instance, state_flddebug
+  use ice_shr_methods    , only : get_component_instance, state_flddebug, state_reset
 
-  use ice_import_export  , only : ice_import, ice_export, ice_advertise_fields, ice_realize_fields, ice_increment_fluxes, ice_zero_fluxes
+  use ice_import_export  , only : ice_import, ice_export, ice_advertise_fields, ice_realize_fields, ice_increment_fluxes
   use ice_domain_size    , only : nx_global, ny_global
   use ice_grid           , only : grid_format, init_grid2
   use ice_communicate    , only : init_communicate, my_task, master_task, mpi_comm_ice
@@ -882,7 +882,7 @@ contains
     !-----------------------------------------------------------------
     ! Create cice export state
     !-----------------------------------------------------------------
-
+    call state_reset(exportstate, c0, rc)
     call ice_export (exportstate, rc)
     if (ChkErr(rc,__LINE__,u_FILE_u)) return
 
@@ -1118,7 +1118,7 @@ contains
 
     if(profile_memory) call ESMF_VMLogMemInfo("Entering CICE_Run : ")
     call ESMF_TimeIntervalGet(timeStep, s=cpl_dt)
-    call ice_zero_fluxes(exportState, rc)
+    call state_reset(exportState, c0, rc)
     nsteps = INT(cpl_dt / dt) 
     do k=1, nsteps
       call CICE_Run()
