@@ -36,9 +36,10 @@ jobs:
       - name: install conda environment
         uses: conda-incubator/setup-miniconda@v3
         with:
-           activate-environment: "cice"
-           environment-file: configuration/scripts/machines/environment.yml
-            auto-activate-base: false
+          activate-environment: cice
+          environment-file: configuration/scripts/machines/environment.yml
+          auto-activate-base: false
+          mamba-version: "*"
       - name: system info
         # shell: /bin/bash {0}
         run: |
