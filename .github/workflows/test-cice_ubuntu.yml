@@ -29,16 +29,11 @@ jobs:
         uses: ConorMacBride/install-package@v1
         with:
           apt: csh
-      - name: clone
+      - name: clone CICE
         uses: actions/checkout@v2
         with:
           submodules: 'recursive'
-      - name: log files
-        run: |
-          ls
-          ls $HOME
-          pwd
-      - name: install miniconda
+      - name: install conda environment
         uses: conda-incubator/setup-miniconda@v3
         with:
            activate-environment: "cice"
@@ -47,6 +42,7 @@ jobs:
         shell: /bin/bash {0}
         run: |
           conda init && conda activate cice
+          conda env list
           type wget
           type curl
           type csh
@@ -56,9 +52,9 @@ jobs:
           echo "sw_vers: $(sw_vers)"
           echo "HOME: $HOME"
           echo "GITHUB_WORKSPACE: $GITHUB_WORKSPACE"
-          echo "OS: ${{ matrix.os }}"
-          echo "ENVDEF: ${{ matrix.envdef }}"
-          echo "MINICOND: ${{ matrix.minicond }}"
+          # echo "OS: ${{ matrix.os }}"
+          # echo "ENVDEF: ${{ matrix.envdef }}"
+          # echo "MINICOND: ${{ matrix.minicond }}"
       - name: make test directories
         run: |
           ln -s ${GITHUB_WORKSPACE}/../CICE ${HOME}/cice
