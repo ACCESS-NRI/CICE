@@ -41,7 +41,7 @@ jobs:
           auto-activate-base: false
           mamba-version: "*"
       - name: system info
-        # shell: /bin/bash {0}
+        shell: /bin/bash {0}
         run: |
           conda env list
           type wget
