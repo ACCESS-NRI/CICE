@@ -23,12 +23,15 @@ jobs:
   build:
     name: "CICETesting"
     runs-on: [ubuntu-latest]
+  
     steps:
-        - name: clone
-          uses: actions/checkout@v2
-          with:
-            submodules: 'recursive'
-      - uses: conda-incubator/setup-miniconda@v3
+      - name: clone
+        uses: actions/checkout@v2
+        with:
+          submodules: 'recursive'
+      - name: install miniconda
+        uses: conda-incubator/setup-miniconda@v3
+        with:
            activate-environment: "cice"
            environment-file: "$HOME/cice/confiugration/scripts/machines/environment.yml"
       - name: system info
