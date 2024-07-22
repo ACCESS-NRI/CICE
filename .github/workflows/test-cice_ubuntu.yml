@@ -29,7 +29,6 @@ jobs:
         uses: ConorMacBride/install-package@v1
         with:
           apt: csh
-            - name: system info
       - name: system info
         shell: /bin/bash {0}
         run: |
@@ -69,10 +68,8 @@ jobs:
           conda init tcsh
           cd $HOME/cice
           conda env create -f configuration/scripts/machines/environment.yml
-
       - name: make test directories
         run: |
-          ln -s ${GITHUB_WORKSPACE}/../CICE ${HOME}/cice
           mkdir -p "$HOME/cice-dirs/runs" "$HOME/cice-dirs/baseline" "$HOME/cice-dirs/input"
       - name: check for tabs
         run: |
