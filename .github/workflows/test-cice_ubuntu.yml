@@ -41,7 +41,7 @@ jobs:
       - name: system info
         shell: /bin/bash {0}
         run: |
-          conda init && conda activate cice
+          conda activate /usr/share/miniconda/envs/cice
           conda env list
           type wget
           type curl
