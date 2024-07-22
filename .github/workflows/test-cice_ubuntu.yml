@@ -55,6 +55,7 @@ jobs:
           echo "ENVDEF: ${{ matrix.envdef }}"
           echo "MINICOND: ${{ matrix.minicond }}"
       - name: link
+        shell: /bin/bash {0}
         run: |
            ln -s . ${HOME}/cice
 #           ls -al ${HOME}/
