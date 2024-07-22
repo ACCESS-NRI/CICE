@@ -30,6 +30,7 @@ jobs:
         with:
           submodules: 'recursive'
       - name: log files
+        shell: /bin/bash {0}
         run: |
           ls
           pwd
