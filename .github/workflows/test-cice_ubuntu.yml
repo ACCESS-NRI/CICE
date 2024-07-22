@@ -95,9 +95,7 @@ jobs:
       #     conda env create -f configuration/scripts/machines/environment.yml
       - name: check conda env
         run: |
-          conda info
-          # conda activate cice
-          which clang && which gfortran && which mpicc && which mpifort && which make
+          conda activate cice && which clang && which gfortran && which mpicc && which mpifort && which make
           clang --version
           gfortran --version
           mpifort --version
