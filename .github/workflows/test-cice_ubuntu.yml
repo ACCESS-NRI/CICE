@@ -33,7 +33,7 @@ jobs:
         uses: conda-incubator/setup-miniconda@v3
         with:
            activate-environment: "cice"
-           environment-file: "CICE/confiugration/scripts/machines/environment.yml"
+           environment-file: "CICE/configuration/scripts/machines/environment.yml"
       - name: system info
         shell: /bin/bash {0}
         run: |
