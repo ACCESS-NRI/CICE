@@ -46,7 +46,7 @@ jobs:
       - name: system info
         shell: /bin/bash {0}
         run: |
-          conda activate cice
+          conda init && conda activate cice
           type wget
           type curl
           type csh
@@ -61,10 +61,11 @@ jobs:
           echo "MINICOND: ${{ matrix.minicond }}"
       - name: make test directories
         run: |
-           mkdir -p "$HOME/cice-dirs/runs" "$HOME/cice-dirs/baseline" "$HOME/cice-dirs/input"
+          ln -s ${GITHUB_WORKSPACE}/../CICE ${HOME}/cice
+          mkdir -p "$HOME/cice-dirs/runs" "$HOME/cice-dirs/baseline" "$HOME/cice-dirs/input"
       - name: check for tabs
         run: |
-          cd /cice/cicecore
+          cd ${HOME}/cice/cicecore
           set cnt = 0
           set ffiles = `find -P . -iname "*.f*"`
           set cfiles = `find -P . -iname "*.c*"`
@@ -86,7 +87,7 @@ jobs:
       #     conda env create -f configuration/scripts/machines/environment.yml
       - name: check conda env
         run: |
-          # conda activate cice && 
+          conda activate cice && 
           which clang && which gfortran && which mpicc && which mpifort && which make
           clang --version
           gfortran --version
