@@ -17,7 +17,7 @@ on:
 
 defaults:
   run:
-    shell: /bin/csh -e {0}
+    shell: /bin/bash -el {0}
 
 jobs:
   build:
@@ -30,7 +30,6 @@ jobs:
         with:
           apt: csh
       - name: system info
-        shell: /bin/bash {0}
         run: |
           type wget
           type curl
@@ -53,21 +52,20 @@ jobs:
            ln -s ${GITHUB_WORKSPACE}/../CICE ${HOME}/cice
 #           ls -al ${HOME}/
 #           ls -al ${GITHUB_WORKSPACE}/
-      # - name: install conda environment
-      #   uses: conda-incubator/setup-miniconda@v3
-      #   with:
-      #     activate-environment: cice
-      #     environment-file: configuration/scripts/machines/environment.yml
-      #     auto-activate-base: false
-      #     mamba-version: "*"
-      - name: setup conda env
-        shell: /bin/bash {0}
-        run: |
-          cd $HOME && mkdir -p cice-dirs/runs cice-dirs/baseline cice-dirs/input
-          source $HOME/miniconda/bin/activate
-          conda init tcsh
-          cd $HOME/cice
-          conda env create -f configuration/scripts/machines/environment.yml
+      - name: install conda environment
+        uses: conda-incubator/setup-miniconda@v3
+        with:
+          activate-environment: cice
+          environment-file: configuration/scripts/machines/environment.yml
+          auto-activate-base: false
+          mamba-version: "*"
+      # - name: setup conda env
+      #   run: |
+      #     cd $HOME && mkdir -p cice-dirs/runs cice-dirs/baseline cice-dirs/input
+      #     source $HOME/miniconda/bin/activate
+      #     conda init tcsh
+      #     cd $HOME/cice
+      #     conda env create -f configuration/scripts/machines/environment.yml
       - name: make test directories
         run: |
           mkdir -p "$HOME/cice-dirs/runs" "$HOME/cice-dirs/baseline" "$HOME/cice-dirs/input"
@@ -94,6 +92,9 @@ jobs:
       #     cd $HOME/cice
       #     conda env create -f configuration/scripts/machines/environment.yml
       - name: check conda env
+
+# See https://github.com/marketplace/actions/setup-miniconda#important ... its very hard to figure out how to get the conda environment activated correctly!!
+
         run: |
           conda activate cice && which clang && which gfortran && which mpicc && which mpifort && which make
           clang --version
@@ -146,11 +147,6 @@ jobs:
           ln -s JRA55_gx3_03hr_forcing_200501.nc JRA55_gx3_03hr_forcing_2005.nc
           cd $HOME/cice-dirs/input
           ls -alR
-#      - name: run case
-#        run: |
-#          cd $HOME/cice
-#          cd case1
-#          ./cice.run
       - name: run suite
         run: |
           cd $HOME/cice
