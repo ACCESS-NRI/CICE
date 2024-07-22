@@ -30,10 +30,9 @@ jobs:
         with:
           submodules: 'recursive'
       - name: log files
-        shell: /bin/bash {0}
         run: |
           ls
-          ls ($HOME)
+          ls $HOME
           pwd
       - name: install miniconda
         uses: conda-incubator/setup-miniconda@v3
