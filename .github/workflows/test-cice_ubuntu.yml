@@ -33,6 +33,7 @@ jobs:
         shell: /bin/bash {0}
         run: |
           ls
+          ls ($HOME)
           pwd
       - name: install miniconda
         uses: conda-incubator/setup-miniconda@v3
