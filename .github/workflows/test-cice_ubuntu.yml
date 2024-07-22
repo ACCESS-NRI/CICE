@@ -42,6 +42,7 @@ jobs:
       - name: system info
         shell: /bin/bash {0}
         run: |
+          conda activate cice
           type wget
           type curl
           type csh
@@ -56,7 +57,7 @@ jobs:
           echo "MINICOND: ${{ matrix.minicond }}"
       - name: make test directories
         run: |
-           mkdir -p cice-dirs/runs cice-dirs/baseline cice-dirs/input
+           mkdir -p "$HOME/cice-dirs/runs" "$HOME/cice-dirs/baseline" "$HOME/cice-dirs/input"
       - name: check for tabs
         run: |
           cd /cice/cicecore
