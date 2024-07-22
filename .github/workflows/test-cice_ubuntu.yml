@@ -87,7 +87,7 @@ jobs:
       #     conda env create -f configuration/scripts/machines/environment.yml
       - name: check conda env
         run: |
-          conda activate cice && 
+          conda activate cice
           which clang && which gfortran && which mpicc && which mpifort && which make
           clang --version
           gfortran --version
@@ -110,15 +110,15 @@ jobs:
 #          mpifort --showme:incdirs
       - name: check setup case
         run: |
-          # cd cice
+          cd $HOME/cice
           ./cice.setup -m conda -e ${{ matrix.envdef }} -c case0 --pes 1x1 -s diag1
       - name: check setup test
         run: |
-          # cd $HOME/cice
+          cd $HOME/cice
           ./cice.setup -m conda -e ${{ matrix.envdef }} --test smoke --testid c0
       - name: run hello world unit test
         run: |
-          # cd $HOME/cice
+          cd $HOME/cice
           ./cice.setup -m conda -e ${{ matrix.envdef }} --test unittest --pes 2x1 -s helloworld --testid hw01
           cd *helloworld*hw01
           ./cice.build
