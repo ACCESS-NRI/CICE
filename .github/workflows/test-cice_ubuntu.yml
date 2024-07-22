@@ -38,8 +38,9 @@ jobs:
         with:
            activate-environment: "cice"
            environment-file: configuration/scripts/machines/environment.yml
+            auto-activate-base: false
       - name: system info
-        shell: /bin/bash {0}
+        # shell: /bin/bash {0}
         run: |
           conda activate /usr/share/miniconda/envs/cice
           conda env list
@@ -83,7 +84,8 @@ jobs:
       #     conda env create -f configuration/scripts/machines/environment.yml
       - name: check conda env
         run: |
-          conda activate cice
+          conda info
+          # conda activate cice
           which clang && which gfortran && which mpicc && which mpifort && which make
           clang --version
           gfortran --version
