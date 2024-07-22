@@ -54,15 +54,12 @@ jobs:
           echo "OS: ${{ matrix.os }}"
           echo "ENVDEF: ${{ matrix.envdef }}"
           echo "MINICOND: ${{ matrix.minicond }}"
-      - name: link
-        shell: /bin/bash {0}
+      - name: make test directories
         run: |
-           ln -s . ${HOME}/cice
-#           ls -al ${HOME}/
-#           ls -al ${GITHUB_WORKSPACE}/
+           mkdir -p cice-dirs/runs cice-dirs/baseline cice-dirs/input
       - name: check for tabs
         run: |
-          cd ${HOME}/cice/cicecore
+          cd /cice/cicecore
           set cnt = 0
           set ffiles = `find -P . -iname "*.f*"`
           set cfiles = `find -P . -iname "*.c*"`
@@ -107,22 +104,22 @@ jobs:
 #          mpifort --showme:incdirs
       - name: check setup case
         run: |
-          cd $HOME/cice
+          # cd cice
           ./cice.setup -m conda -e ${{ matrix.envdef }} -c case0 --pes 1x1 -s diag1
       - name: check setup test
         run: |
-          cd $HOME/cice
+          # cd $HOME/cice
           ./cice.setup -m conda -e ${{ matrix.envdef }} --test smoke --testid c0
       - name: run hello world unit test
         run: |
-          cd $HOME/cice
+          # cd $HOME/cice
           ./cice.setup -m conda -e ${{ matrix.envdef }} --test unittest --pes 2x1 -s helloworld --testid hw01
           cd *helloworld*hw01
           ./cice.build
           ./cice.run
       - name: check cice compile
         run: |
-          cd $HOME/cice
+          cd (${GITHUB_WORKSPACE})/cice
           ./cice.setup -m conda -e ${{ matrix.envdef }} -c case1 --pes 2x2 -s diag1
           cd case1
           ./cice.build
