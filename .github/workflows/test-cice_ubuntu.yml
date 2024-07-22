@@ -62,7 +62,7 @@ jobs:
 #           ls -al ${GITHUB_WORKSPACE}/
       - name: check for tabs
         run: |
-          cd $HOME/cice/cicecore
+          cd ${HOME}/cice/cicecore
           set cnt = 0
           set ffiles = `find -P . -iname "*.f*"`
           set cfiles = `find -P . -iname "*.c*"`
