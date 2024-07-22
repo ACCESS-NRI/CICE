@@ -54,7 +54,7 @@ jobs:
 #           ls -al ${HOME}/
 #           ls -al ${GITHUB_WORKSPACE}/
       - name: check for tabs
-        shell: /bin/csh
+        shell: /bin/csh -e {0}
         run: |
           cd ${HOME}/cice/cicecore
           set cnt = 0
