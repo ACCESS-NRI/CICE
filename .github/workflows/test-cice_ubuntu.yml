@@ -22,10 +22,13 @@ defaults:
 jobs:
   build:
     name: "CICETesting"
-    runs-on: [ubuntu-latest]
-    include:
-      envdef: "linux"
-  
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+       os: [ubuntu-latest]
+        include: 
+         - os: ubuntu-latest
+           envdef: linux
     steps:
       - name: install csh
         uses: ConorMacBride/install-package@v1
@@ -42,8 +45,8 @@ jobs:
           echo "sw_vers: $(sw_vers)"
           echo "HOME: $HOME"
           echo "GITHUB_WORKSPACE: $GITHUB_WORKSPACE"
-          # echo "OS: ${{ matrix.os }}"
-          # echo "ENVDEF: ${{ matrix.envdef }}"
+          echo "OS: ${{ matrix.os }}"
+          echo "ENVDEF: ${{ matrix.envdef }}"
           # echo "MINICOND: ${{ matrix.minicond }}"
       - name: clone CICE
         uses: actions/checkout@v2
