@@ -54,9 +54,7 @@ module ice_import_export
   public  :: ice_realize_fields
   public  :: ice_import
   public  :: ice_export
-  public  :: ice_increment_fluxes 
-  public  :: ice_zero_fluxes 
-
+  public  :: ice_increment_fluxes
   private :: fldlist_add
   private :: fldlist_realize
   private :: state_FldChk
@@ -1003,13 +1001,6 @@ contains
     ! Create the export state
     !---------------------------------
 
-    ! Zero out fields with tmask for proper coupler accumulation in ice free areas
-    !  if (first_call .or. .not.single_column) then
-   !     call state_reset(exportState, c0, rc)
-   !     if (ChkErr(rc,__LINE__,u_FILE_u)) return
-   !     first_call = .false.
-   !  endif
-
     ! Create a temporary field
     allocate(tempfld(nx_block,ny_block,nblocks))
 
@@ -1302,34 +1293,11 @@ contains
        end do
     end if
 
-    if (.not. first_call) then
-      call ice_export_access(exportState, ailohi, rc)
-      first_call = .false.
-    end if
+    call ice_export_access(exportState, ailohi, rc)
+    first_call = .false.
     call log_state_info(exportState, fldsFrIce, fldsFrIce_num, exportState)
 
   end subroutine ice_export
-
-
-  subroutine ice_zero_fluxes( state, rc )
-   type(ESMF_State), intent(inout) :: state
-   integer, intent(out)   :: rc
-
-   real(kind=dbl_kind), pointer :: fhocn_ptr(:), fresh_ptr(:), fsalt_ptr(:)
-   character(len=*) , parameter :: subname='(ice_import_export:ice_zero_fluxes)'
-   ! ----------------------------------------------
-
-   rc = ESMF_SUCCESS
-
-   call state_getfldptr(state, 'net_heat_flx_to_ocn', fhocn_ptr, rc)
-   call state_getfldptr(state, 'mean_fresh_water_to_ocean_rate', fresh_ptr, rc)
-   call state_getfldptr(state, 'mean_salt_rate', fsalt_ptr, rc)
-
-   fhocn_ptr(:) = 0.0
-   fresh_ptr(:) = 0.0
-   fsalt_ptr(:) = 0.0
-  
-  end subroutine ice_zero_fluxes
 
 
   subroutine ice_increment_fluxes( state, nsteps, rc )
