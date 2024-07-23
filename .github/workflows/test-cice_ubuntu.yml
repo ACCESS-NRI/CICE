@@ -23,6 +23,8 @@ jobs:
   build:
     name: "CICETesting"
     runs-on: [ubuntu-latest]
+    include:
+      envdef: "linux"
   
     steps:
       - name: install csh
@@ -75,17 +77,6 @@ jobs:
           environment-file: configuration/scripts/machines/environment.yml
           auto-activate-base: false
           mamba-version: "*"
-      - name: make test directories
-        run: |
-      
-      # - name: setup conda env
-      #   shell: /bin/bash {0}
-      #   run: |
-      #     cd $HOME && mkdir -p cice-dirs/runs cice-dirs/baseline cice-dirs/input
-      #     source $HOME/miniconda/bin/activate
-      #     conda init tcsh
-      #     cd $HOME/cice
-      #     conda env create -f configuration/scripts/machines/environment.yml
       - name: check conda env
         run: |
           conda activate cice && which clang && which gfortran && which mpicc && which mpifort && which make
