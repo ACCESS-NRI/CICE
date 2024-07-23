@@ -33,7 +33,7 @@ jobs:
       - name: install csh
         uses: ConorMacBride/install-package@v1
         with:
-          apt: csh where
+          apt: csh
       - name: system info
         run: |
           type wget
@@ -107,7 +107,8 @@ jobs:
         run: |
           cd $HOME/cice
           source /usr/share/miniconda/etc/profile.d/conda.csh
-          ./cice.setup -m conda -e ${{ matrix.envdef }} -c case0 --pes 1x1 -s diag1
+          conda activate cice
+          /bin/csh cice.setup -m conda -e ${{ matrix.envdef }} -c case0 --pes 1x1 -s diag1
       - name: check setup test
         run: |
           cd $HOME/cice
