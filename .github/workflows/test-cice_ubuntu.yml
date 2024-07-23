@@ -108,7 +108,7 @@ jobs:
           cd $HOME/cice
           source /usr/share/miniconda/etc/profile.d/conda.csh
           conda activate cice
-          /bin/csh cice.setup -m conda -e ${{ matrix.envdef }} -c case0 --pes 1x1 -s diag1
+          ./cice.setup -m conda -e ${{ matrix.envdef }} -c case0 --pes 1x1 -s diag1
       - name: check setup test
         run: |
           cd $HOME/cice
