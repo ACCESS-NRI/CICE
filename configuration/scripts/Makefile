@@ -93,7 +93,7 @@ targets:
 	@echo " "
 	@echo "Supported Makefile Targets are: cice, libcice, makdep, depends, clean, realclean"
 	@echo "                   Diagnostics: targets, db_files, db_flags"
-	@echo "                   Unit Tests : helloworld, calchk, sumchk, bcstchk, gridavgchk, halochk, optargs, opticep"
+	@echo "                   Unit Tests : helloworld, calchk, sumchk, bcstchk, gridavgchk, gridloadchk, halochk, optargs, opticep"
 target: targets
 
 db_files:
@@ -150,6 +150,8 @@ sumchk: $(EXEC)
 bcstchk: $(EXEC)
 
 gridavgchk: $(EXEC)
+
+gridloadchk: $(EXEC)
 
 halochk: $(EXEC)
 
