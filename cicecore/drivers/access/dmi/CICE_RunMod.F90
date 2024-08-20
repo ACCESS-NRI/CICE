@@ -645,7 +645,7 @@
                             fiso_evap=fiso_evap(:,:,:,iblk),         &
                             fiso_ocn =fiso_ocn (:,:,:,iblk))
 
-#ifdef CICE_IN_NEMO
+! #ifdef CICE_IN_NEMO
 !echmod - comment this out for efficiency, if .not. calc_Tsfc
          if (.not. calc_Tsfc) then
 
@@ -661,12 +661,12 @@
                           fresh    (:,:,iblk),   fhocn    (:,:,iblk))
          endif
 !echmod
-#endif
+! #endif
          call ice_timer_stop(timer_couple,iblk)   ! atm/ocn coupling
 
       end subroutine coupling_prep
 
-#ifdef CICE_IN_NEMO
+! #ifdef CICE_IN_NEMO
 
 !=======================================================================
 !
@@ -737,7 +737,7 @@
 
       end subroutine sfcflux_to_ocn
 
-#endif
+! #endif
 
 !=======================================================================
 
