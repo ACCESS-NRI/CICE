@@ -577,23 +577,18 @@ contains
          do i = 1,nx_block
             do k=1,ncat
                flatn_f(i,j,k,iblk) = -flatn_f(i,j,k,iblk) * Lsub ! convert to W m-2
-               fsurfn_f(i,j,k,iblk) = fsurfn_f(i,j,k,iblk) +  fcondtopn_f(i,j,k,iblk)
+               fsurfn_f(i,j,k,iblk) = fsurfn_f(i,j,k,iblk) + fcondtopn_f(i,j,k,iblk)
 
                if (trcrn(i,j,nt_Tsfc,k,iblk) > 200.0) then
                   trcrn(i,j,nt_Tsfc,k,iblk) = trcrn(i,j,nt_Tsfc,k,iblk) - Tffresh
                end if
                trcrn(i,j,nt_Tsfc,k,iblk) = max(trcrn(i,j,nt_Tsfc,k,iblk), -60.0)
                trcrn(i,j,nt_Tsfc,k,iblk) = min(trcrn(i,j,nt_Tsfc,k,iblk), 0.0)
-               
-               ! if (aicen(i,j,k,iblk) > puny) then
-               !    fsurfn_f(i,j,k,iblk) = fsurfn_f(i,j,k,iblk) / aicen(i,j,k,iblk)
-               !    flatn_f(i,j,k,iblk) = flatn_f(i,j,k,iblk) / aicen(i,j,k,iblk)
-               !    fcondtopn_f(i,j,k,iblk) = fcondtopn_f(i,j,k,iblk) / aicen(i,j,k,iblk)
-               ! else
-               !    fsurfn_f(i,j,k,iblk) = 0.0
-               !    flatn_f(i,j,k,iblk) = 0.0
-               !    fcondtopn_f(i,j,k,iblk) = 0.0
-               ! end if
+
+               fsurfn_f(i,j,k,iblk) = fsurfn_f(i,j,k,iblk) * aicen(i,j,k,iblk)
+               flatn_f(i,j,k,iblk) = flatn_f(i,j,k,iblk) * aicen(i,j,k,iblk)
+               fcondtopn_f(i,j,k,iblk) = fcondtopn_f(i,j,k,iblk) * aicen(i,j,k,iblk)
+
             end do
          end do
       end do
@@ -622,11 +617,11 @@ contains
              Tair (i,j,iblk)         = aflds(i,j, 7,iblk)
              Qa   (i,j,iblk)         = aflds(i,j, 8,iblk)
              frzmlt (i,j,iblk)       = aflds(i,j, 9,iblk)
-             swvdr(i,j,iblk)         = aflds(i,j,10,iblk)
-             swidr(i,j,iblk)         = aflds(i,j,11,iblk)
-             swvdf(i,j,iblk)         = aflds(i,j,12,iblk)
-             swidf(i,j,iblk)         = aflds(i,j,13,iblk)
-             flw  (i,j,iblk)         = aflds(i,j,14,iblk)
+             swvdr(i,j,iblk)         = 0.0 ! aflds(i,j,10,iblk)
+             swidr(i,j,iblk)         = 0.0 !aflds(i,j,11,iblk)
+             swvdf(i,j,iblk)         = 0.0 !aflds(i,j,12,iblk)
+             swidf(i,j,iblk)         = 0.0 !aflds(i,j,13,iblk)
+             flw  (i,j,iblk)         = 0.0 ! aflds(i,j,14,iblk)
              frain(i,j,iblk)         = aflds(i,j,15,iblk)
              fsnow(i,j,iblk)         = aflds(i,j,16,iblk)
              ! strax !! windstress - already handled, come back to this
@@ -2091,7 +2086,7 @@ contains
       jhi = this_block%jhi
       do j = jlo, jhi
          do i = ilo, ihi
-            if (aicen(i,j,n,iblk) > c0) then
+            if (aicen(i,j,n,iblk) > puny) then
                hs1 = vsnon(i,j,n,iblk)/(aicen(i,j,n,iblk)*rnslyr)
                if (hs1 > hs_min/rnslyr) then
                   !snow is top layer
