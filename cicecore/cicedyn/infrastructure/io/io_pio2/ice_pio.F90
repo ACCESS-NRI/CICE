@@ -177,7 +177,7 @@
       write(nu_diag,*) subname,' baseroot   = ',lroot
       write(nu_diag,*) subname,' stride     = ',lstride
       write(nu_diag,*) subname,' nmode      = ',nmode0
-   end if
+   endif
 
    call pio_init(my_task, MPI_COMM_ICE, liotasks, master_task, lstride, &
                  rearranger, ice_pio_subsystem, base=lroot)
@@ -196,17 +196,14 @@
          endif
 
          if (File%fh<0) then
-            ! filename not open
-            inquire(file=trim(filename),exist=exists)
-            if (exists) then
-               if (lclobber) then
+            if (lclobber) then
                   nmode = ior(PIO_CLOBBER,nmode0)
                   status = pio_createfile(ice_pio_subsystem, File, pio_iotype, trim(filename), nmode)
-                  call ice_pio_check(status, subname//' ERROR: Failed to overwrite file '//trim(filename), &
+                  call ice_pio_check(status, subname//' ERROR: Failed to create file '//trim(filename), &
                        file=__FILE__,line=__LINE__)
                   if (my_task == master_task) then
                      write(nu_diag,*) subname,' create file ',trim(filename)
-                  end if
+                  endif
                else
                   nmode = pio_write
                   status = pio_openfile(ice_pio_subsystem, File, pio_iotype, trim(filename), nmode)
@@ -214,20 +211,10 @@
                        file=__FILE__,line=__LINE__)
                   if (my_task == master_task) then
                      write(nu_diag,*) subname,' open file ',trim(filename)
-                  end if
+                  endif
                endif
-            else
-               nmode = ior(PIO_NOCLOBBER,nmode0)
-               status = pio_createfile(ice_pio_subsystem, File, pio_iotype, trim(filename), nmode)
-               call ice_pio_check( status, subname//' ERROR: Failed to create file '//trim(filename), &
-                    file=__FILE__,line=__LINE__)
-               if (my_task == master_task) then
-                  write(nu_diag,*) subname,' create file ',trim(filename)
-               end if
-            endif
-         ! else: filename is already open, just return
          endif
-      end if
+      endif
 
       if (trim(mode) == 'read') then
          inquire(file=trim(filename),exist=exists)
@@ -247,12 +234,12 @@
          else
             if(my_task==master_task) then
                write(nu_diag,*) subname//' ERROR: file not found '//trim(filename)
-            end if
+            endif
             call abort_ice(subname//' ERROR: aborting with invalid file '//trim(filename))
          endif
-      end if
+      endif
 
-   end if
+   endif
 
    call pio_seterrorhandling(ice_pio_subsystem, PIO_INTERNAL_ERROR)
 
