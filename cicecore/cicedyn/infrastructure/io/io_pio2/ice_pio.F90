@@ -197,22 +197,22 @@
 
          if (File%fh<0) then
             if (lclobber) then
-                  nmode = ior(PIO_CLOBBER,nmode0)
-                  status = pio_createfile(ice_pio_subsystem, File, pio_iotype, trim(filename), nmode)
-                  call ice_pio_check(status, subname//' ERROR: Failed to create file '//trim(filename), &
-                       file=__FILE__,line=__LINE__)
-                  if (my_task == master_task) then
-                     write(nu_diag,*) subname,' create file ',trim(filename)
-                  endif
-               else
-                  nmode = pio_write
-                  status = pio_openfile(ice_pio_subsystem, File, pio_iotype, trim(filename), nmode)
-                  call ice_pio_check( status,  subname//' ERROR: Failed to open file '//trim(filename), &
-                       file=__FILE__,line=__LINE__)
-                  if (my_task == master_task) then
-                     write(nu_diag,*) subname,' open file ',trim(filename)
-                  endif
+               nmode = ior(PIO_CLOBBER,nmode0)
+               status = pio_createfile(ice_pio_subsystem, File, pio_iotype, trim(filename), nmode)
+               call ice_pio_check(status, subname//' ERROR: Failed to create file '//trim(filename), &
+                     file=__FILE__,line=__LINE__)
+               if (my_task == master_task) then
+                  write(nu_diag,*) subname,' create file ',trim(filename)
                endif
+            else
+               nmode = pio_write
+               status = pio_openfile(ice_pio_subsystem, File, pio_iotype, trim(filename), nmode)
+               call ice_pio_check( status,  subname//' ERROR: Failed to open file '//trim(filename), &
+                     file=__FILE__,line=__LINE__)
+               if (my_task == master_task) then
+                  write(nu_diag,*) subname,' open file ',trim(filename)
+               endif
+            endif
          endif
       endif
 
