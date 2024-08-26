@@ -585,9 +585,9 @@ contains
                trcrn(i,j,nt_Tsfc,k,iblk) = max(trcrn(i,j,nt_Tsfc,k,iblk), -60.0)
                trcrn(i,j,nt_Tsfc,k,iblk) = min(trcrn(i,j,nt_Tsfc,k,iblk), 0.0)
 
-               fsurfn_f(i,j,k,iblk) = fsurfn_f(i,j,k,iblk) * aicen(i,j,k,iblk)
-               flatn_f(i,j,k,iblk) = flatn_f(i,j,k,iblk) * aicen(i,j,k,iblk)
-               fcondtopn_f(i,j,k,iblk) = fcondtopn_f(i,j,k,iblk) * aicen(i,j,k,iblk)
+               ! fsurfn_f(i,j,k,iblk) = fsurfn_f(i,j,k,iblk) * aicen(i,j,k,iblk)
+               ! flatn_f(i,j,k,iblk) = flatn_f(i,j,k,iblk) * aicen(i,j,k,iblk)
+               ! fcondtopn_f(i,j,k,iblk) = fcondtopn_f(i,j,k,iblk) * aicen(i,j,k,iblk)
 
             end do
          end do
@@ -2103,13 +2103,15 @@ contains
                   
                   tempfld(i,j,iblk) = calculate_Tin_from_qin(trcrn(i,j,nt_qice,n,iblk),Tmlt1)  
                   ki = calculate_ki_from_Tin(tempfld(i,j,iblk), trcrn(i,j,nt_sice,n,iblk))
-                  tempfld1(i,j,iblk) = (c2 * ki / hi1) * aicen(i,j,n,iblk)
-                  tempfld(i,j,iblk) = tempfld(i,j,iblk) * aicen(i,j,n,iblk)
-               
+                  tempfld1(i,j,iblk) = (c2 * ki / hi1)
                end if
+               
+               tempfld(i,j,iblk) = tempfld(i,j,iblk) * aicen(i,j,n,iblk)
+               tempfld1(i,j,iblk) = tempfld1(i,j,iblk) * aicen(i,j,n,iblk)
+
             else
-               tempfld1(i,j,iblk) = 0.0
                tempfld(i,j,iblk) = 0.0
+               tempfld1(i,j,iblk) = 0.0
             endif
          end do
       end do
