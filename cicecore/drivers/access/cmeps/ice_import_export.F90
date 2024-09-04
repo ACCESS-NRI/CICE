@@ -42,6 +42,7 @@ module ice_import_export
   use icepack_intfc      , only : icepack_query_tracer_indices
   use icepack_parameters , only : puny, c2
   use cice_wrapper_mod   , only : t_startf, t_stopf, t_barrierf
+  use ice_read_write     , only : ice_open_nc, ice_read_nc, ice_close_nc
 #ifdef CESMCOUPLED
   use shr_frz_mod        , only : shr_frz_freezetemp
   use shr_mpi_mod        , only : shr_mpi_min, shr_mpi_max
@@ -89,6 +90,8 @@ module ice_import_export
   real(dbl_kind), allocatable :: mod2med_areacor(:) ! ratios of model areas to input mesh areas
   real(dbl_kind), allocatable :: med2mod_areacor(:) ! ratios of input mesh areas to model areas
 
+  real(kind=dbl_kind), dimension(:,:,:), allocatable :: lice_nth, lice_sth, msk_nth, msk_sth, amsk_nth, amsk_sth
+
   integer, parameter       :: fldsMax = 100
   integer                  :: fldsToIce_num = 0
   integer                  :: fldsFrIce_num = 0
@@ -124,6 +127,8 @@ contains
 
     rc = ESMF_SUCCESS
     if (io_dbug > 5) call ESMF_LogWrite(subname//' called', ESMF_LOGMSG_INFO)
+
+    call get_lice_discharge_masks_or_iceberg('lice_discharge_masks_iceberg.nc')
 
     ! Determine if ice sends multiple ice category info back to mediator
     send_i2x_per_cat = .false.
@@ -778,22 +783,15 @@ contains
        enddo
     end do
 
-#ifdef CESMCOUPLED
-    ! Use shr_frz_mod for this
-    do iblk = 1, nblocks
-       Tf(:,:,iblk) = shr_frz_freezetemp(sss(:,:,iblk))
-    end do
-#else
-    !$OMP PARALLEL DO PRIVATE(iblk,i,j)
-    do iblk = 1, nblocks
-       do j = 1,ny_block
-          do i = 1,nx_block
+      !$OMP PARALLEL DO PRIVATE(iblk,i,j)
+      do iblk = 1, nblocks
+         do j = 1,ny_block
+            do i = 1,nx_block
             Tf(i,j,iblk) = icepack_sea_freezing_temperature(sss(i,j,iblk))
-          end do
-       end do
-    end do
-    !$OMP END PARALLEL DO
-#endif
+            end do
+         end do
+      end do
+      !$OMP END PARALLEL DO
 
     call t_stopf ('cice_imp_ocn')
 
@@ -839,12 +837,12 @@ contains
   end subroutine ice_import
 
   !===============================================================================
-  subroutine ice_export( exportState, rc )
+  subroutine ice_export(importState, exportState, rc )
 
     use ice_scam, only : single_column
 
     ! input/output variables
-    type(ESMF_State), intent(inout) :: exportState
+    type(ESMF_State), intent(inout) :: importState, exportState
     integer         , intent(out)   :: rc
 
     ! local variables
@@ -1288,7 +1286,7 @@ contains
        end do
     end if
 
-    call ice_export_access(exportState, ailohi, rc)
+    call ice_export_access(importState, exportState, ailohi, rc)
     first_call = .false.
     call log_state_info(exportState, fldsFrIce, fldsFrIce_num, exportState)
 
@@ -1373,8 +1371,8 @@ contains
 
          else
             call ESMF_FieldGet(field, farrayptr=fld_ptr1)
-            lo = minval(fld_ptr1, sea_ice_mask==1.0)
-            hi = maxval(fld_ptr1, sea_ice_mask==1.0)
+            lo = minval(fld_ptr1)
+            hi = maxval(fld_ptr1)
             write (tmpString, *) nan_check(fld_ptr1)
             call ESMF_LogWrite(trim(field_list(i)%stdname) // ' any nans: ' // trim(tmpString), ESMF_LOGMSG_DEBUG, rc=rc)
 
@@ -1989,11 +1987,13 @@ contains
    
    character(len=100) :: tmpString
 
+   call fldlist_add(fldsToIce_num, fldsToIce, 'um_icenth')
+   call fldlist_add(fldsToIce_num, fldsToIce, 'um_icesth')
    call fldlist_add(fldsToIce_num, fldsToIce, 'pen_rad', ungridded_lbound=1, ungridded_ubound=ncat)   
    call fldlist_add(fldsToIce_num, fldsToIce, 'topmelt', ungridded_lbound=1, ungridded_ubound=ncat)   
    call fldlist_add(fldsToIce_num, fldsToIce, 'botmelt', ungridded_lbound=1, ungridded_ubound=ncat)   
    call fldlist_add(fldsToIce_num, fldsToIce, 'tstar_sice', ungridded_lbound=1, ungridded_ubound=ncat)   
-   call fldlist_add(fldsToIce_num, fldsToIce, 'sublim', ungridded_lbound=1, ungridded_ubound=ncat)          
+   call fldlist_add(fldsToIce_num, fldsToIce, 'sublim', ungridded_lbound=1, ungridded_ubound=ncat)   
    
    write (tmpString, *) ncat
    call ESMF_LogWrite("CICE number of ice categories: " // trim(tmpString))
@@ -2019,13 +2019,14 @@ contains
    call fldlist_add(fldsFrIce_num , fldsFrIce, 'ia_itopk', ungridded_lbound=1, ungridded_ubound=ncat) ! from ice flux: keffn_top
    call fldlist_add(fldsFrIce_num , fldsFrIce, 'ia_pndfn', ungridded_lbound=1, ungridded_ubound=ncat) ! from icepack_shorwave: apeffn
    call fldlist_add(fldsFrIce_num , fldsFrIce, 'ia_pndtn', ungridded_lbound=1, ungridded_ubound=ncat) ! from ice state field: trcrn
+   call fldlist_add(fldsFrIce_num , fldsFrIce, 'sstfrz')
 
    write (tmpString, *) ncat
    call ESMF_LogWrite("CICE number of ice categories: " // trim(tmpString))
   end subroutine ice_advertise_fields_access_export
 
 
-  subroutine ice_export_access(exportState, ailohi, rc)
+  subroutine ice_export_access(importState, exportState, ailohi, rc)
 
    use ice_scam, only : single_column
    use ice_domain_size, only: nslyr, nilyr
@@ -2038,7 +2039,7 @@ contains
    use ice_arrays_column, only: apeffn
 
    ! input/output variables
-   type(ESMF_State), intent(inout) :: exportState
+   type(ESMF_State), intent(inout) :: importState, exportState
    integer         , intent(out)   :: rc
 
    real    (kind=dbl_kind) :: ailohi(nx_block,ny_block,max_blocks)
@@ -2049,7 +2050,8 @@ contains
    integer                 :: ilo, ihi, jlo, jhi                   ! beginning and end of physical domain
    logical                 :: flag
    real    (kind=dbl_kind), allocatable :: tempfld(:,:,:), tempfld1(:,:,:), ki_fld(:,:,:,:), hi1_fld(:,:,:,:)
-   real    (kind=dbl_kind) :: hs1, hi1, Tmlt1, ki, rnslyr, rnilyr
+   real(kind=dbl_kind), pointer :: fhocn_ptr(:), fresh_ptr(:), um_icenth(:), um_icesth(:)
+   real    (kind=dbl_kind) :: hs1, hi1, Tmlt1, ki, rnslyr, rnilyr, licefw, liceht
    character(len=*),parameter :: subname = 'ice_export_access'
    character(len=200) :: tmpString
    !-----------------------------------------------------
@@ -2073,6 +2075,8 @@ contains
       ! call state_setexport(exportState, 'ia_pndfn', input=apeffn, lmask=tmask, ifrac=ailohi, rc=rc, index=n, ungridded_index=n)
       ! call state_setexport(exportState, 'ia_pndtn', input=trcrn(:,:,nt_hpnd,:,:), lmask=tmask, ifrac=ailohi, rc=rc, index=n, ungridded_index=n)
    end do
+
+   call state_setexport(exportState, 'sstfrz', input=Tf , lmask=tmask, ifrac=ailohi, rc=rc)
 
    rnslyr = real(nslyr,kind=dbl_kind)      
    rnilyr = real(nilyr,kind=dbl_kind)  
@@ -2120,7 +2124,64 @@ contains
    call state_setexport(exportState, 'ia_itopk', input=tempfld1, lmask=tmask, ifrac=ailohi, rc=rc, ungridded_index=n)
    end do
    
+   call state_getfldptr(importState, 'um_icenth', um_icenth, rc)
+   call state_getfldptr(importState, 'um_icesth', um_icesth, rc)
+
+   call state_getfldptr(exportState, 'net_heat_flx_to_ocn', fhocn_ptr, rc)
+   call state_getfldptr(exportState, 'mean_fresh_water_to_ocean_rate', fresh_ptr, rc)
+   
+   n = 0
+   do iblk = 1, nblocks
+      this_block = get_block(blocks_ice(iblk),iblk)
+      ilo = this_block%ilo
+      ihi = this_block%ihi
+      jlo = this_block%jlo
+      jhi = this_block%jhi
+      do j = jlo, jhi
+         do i = ilo, ihi
+            n = n + 1
+            
+            ! licefw = um_icenth(n)
+            ! licefw = licefw - lice_nth(i,j,iblk)
+            ! licefw = max(0.0, licefw)
+            ! licefw = licefw * msk_nth(i,j,iblk)
+            ! licefw = licefw / amsk_nth(i,j,iblk) 
+            if (tmask(i,j,iblk)) then
+
+               if (lice_nth(i,j,iblk) == 0.0) then
+                  lice_nth(i,j,iblk) = um_icenth(n)
+               end if
+
+               if (lice_sth(i,j,iblk) == 0.0) then
+                  lice_sth(i,j,iblk) = um_icesth(n)
+               end if
+
+               if (amsk_nth(i,j,iblk) > 0.0) then
+                  licefw = max(0.0, um_icenth(n) - lice_nth(i,j,iblk)) * msk_nth(i,j,iblk) / amsk_nth(i,j,iblk) 
+               else if (amsk_sth(i,j,iblk) > 0.0) then
+                  licefw = max(0.0, um_icesth(n) - lice_sth(i,j,iblk)) * msk_sth(i,j,iblk) / amsk_sth(i,j,iblk)
+               else
+                  licefw = 0.0
+               end if
+               
+               licefw = 330.0 * licefw / 3600.0 ! change to constants
+
+               liceht = -licefw * Lfresh
+               
+               fresh_ptr(n) = fresh_ptr(n) + licefw
+               fhocn_ptr(n) = fhocn_ptr(n) + liceht
+
+               lice_nth(i,j,iblk) = um_icenth(n)
+               lice_sth(i,j,iblk) = um_icesth(n)
+
+            end if
+
+         end do
+      end do
+   end do
+
   end subroutine ice_export_access
+
 
   function calculate_ki_from_Tin (Tink, salink) &
    result(ki)
@@ -2161,5 +2222,46 @@ contains
    ki = max (ki, kimin) 
 
    end function calculate_ki_from_Tin
+
+   subroutine get_lice_discharge_masks_or_iceberg(fname)
+
+      ! Called at beginning of each run trunk to read in land ice discharge mask or iceberg
+      ! (off Antarctica and Greenland).
+      
+      implicit none
+      
+      character(len=*), intent(in) :: fname
+      character*80 :: myvar = 'ficeberg'
+      integer(kind=int_kind) :: ncid_i2o, im, k
+      logical :: dbug
+      !!!
+      !character(:), allocatable :: fname_trim
+      !!!
+
+      allocate (lice_nth(nx_block,ny_block,max_blocks)); lice_nth(:,:,:) = 0
+      allocate (lice_sth(nx_block,ny_block,max_blocks)); lice_sth(:,:,:) = 0
+      allocate (msk_nth(nx_block,ny_block,max_blocks));  msk_nth(:,:,:) = 0
+      allocate (msk_sth(nx_block,ny_block,max_blocks));  msk_sth(:,:,:) = 0
+      allocate (amsk_nth(nx_block,ny_block,max_blocks)); amsk_nth(:,:,:) = 0
+      allocate (amsk_sth(nx_block,ny_block,max_blocks)); amsk_sth(:,:,:) = 0
+      
+      dbug = .true.
+      
+      !!!
+      !fname_trim = trim(fname)
+      !!!
+      if (my_task == 0) write(*,'(a,a)'),'BBB1: opening file ',fname
+      if (my_task == 0) write(*,'(a,a)'),'BBB2: opening file ',trim(fname)
+      
+      call ice_open_nc(trim(fname), ncid_i2o)
+
+      call ice_read_nc(ncid_i2o, 1, 'msk_nth',    msk_nth,   dbug)
+      call ice_read_nc(ncid_i2o, 1, 'msk_sth',    msk_sth,   dbug)
+      call ice_read_nc(ncid_i2o, 1, 'amsk_nth',   amsk_nth,  dbug)
+      call ice_read_nc(ncid_i2o, 1, 'amsk_sth',   amsk_sth,  dbug)
+      
+      
+      return
+   end subroutine get_lice_discharge_masks_or_iceberg
 
 end module ice_import_export

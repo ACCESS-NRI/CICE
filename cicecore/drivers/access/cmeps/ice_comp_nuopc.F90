@@ -883,7 +883,8 @@ contains
     ! Create cice export state
     !-----------------------------------------------------------------
     call state_reset(exportstate, c0, rc)
-    call ice_export (exportstate, rc)
+    call state_reset(importState, c0, rc)
+    call ice_export (importState, exportstate, rc)
     if (ChkErr(rc,__LINE__,u_FILE_u)) return
 
     call State_SetScalar(dble(nx_global), flds_scalar_index_nx, exportState, &
@@ -1133,7 +1134,7 @@ contains
 
     call t_barrierf('cice_run_export_BARRIER',mpi_comm_ice)
     call t_startf ('cice_run_export')
-    call ice_export(exportState, rc)
+    call ice_export(importState, exportState, rc)
     if (ChkErr(rc,__LINE__,u_FILE_u)) return
     call t_stopf ('cice_run_export')
 
