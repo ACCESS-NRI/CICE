@@ -3,7 +3,7 @@
          use ice_exit, only: abort_ice
          use netCDF, only: nf90_strerror
          integer, intent(in) :: err_code
-         character (len=80), intent(in) :: string
+         character (len=*), intent(in) :: string
 
          if (my_task == master_task) then
             write(6,*)  string
@@ -56,7 +56,7 @@
             call gather_global(grid_var_glob, var%gv, master_task, distrb_info)
 
             if (my_task == master_task) then
-               if (var%optional == .False.) then 
+               if ( .not. var%optional) then 
                   status = nf90_get_var(fid, varid, test_var)
                   if (status/=NF90_NOERR) call handle_nc_err(status, "Could not load variable '"//trim(var%fn)//"' from grid file")
 
