@@ -12,7 +12,6 @@
          call abort_ice
       end subroutine handle_nc_err
 
-
       module test_grid_var
          use ice_kinds_mod, only: int_kind, dbl_kind
          use ice_communicate, only: my_task, master_task
@@ -27,15 +26,49 @@
          end type
 
          private
-         public :: test_var_unchanged, t_grid_var
+         public :: test_var_unchanged, t_grid_var, test_var_size
 
          real (kind=dbl_kind), dimension(:,:), public,  allocatable :: grid_var_glob, test_var
          real (kind=dbl_kind), dimension(:,:,:), public,  allocatable :: grid_var
          character(len=*), public,  parameter ::  &
             passflag = 'PASS', &
-            failflag = 'FAIL'
+            failflag = 'FAIL', &
+            skipflag = 'SKIP'
 
          contains
+
+         subroutine test_var_size(fid, varid, var, errorflag) 
+
+            ! Get a var from the original netcdf
+            ! Confirm it exists and is of the right size 
+            ! Set errorflag according to the result
+
+            use netcdf, only: nf90_inquire_variable,nf90_inquire_dimension, NF90_NOERR, nf90_max_var_dims      
+            use ice_domain_size, only: nx_global, ny_global
+
+
+            integer, intent(in) :: fid, varid
+            integer :: status, test_nx, test_ny
+            integer, dimension(nf90_max_var_dims) :: dimids
+            character(len=8), intent(out)  :: errorflag
+            type(t_grid_var), intent(in) :: var
+            
+            status = nf90_inquire_variable(fid, varid, dimids = dimids)
+            if(status /= NF90_NOERR) call handle_nc_err(status, "Inq var error ")
+            status = nf90_inquire_dimension(fid, dimids(1), len = test_nx)
+            if(status /= NF90_NOERR) call handle_nc_err(status, "Inq var error  ")
+            status = nf90_inquire_dimension(fid, dimids(2), len = test_ny)
+            if(status /= NF90_NOERR) call handle_nc_err(status, "Inq var error ")
+
+            if (my_task == master_task) write (6,*) "LOG: checking size of "//trim(var%fn)
+            if (test_nx/=nx_global .or. test_ny/=ny_global) then
+               if (my_task == master_task) then
+                  errorflag = failflag
+                  write (6,*) "Error in ", var%fn, " nx_global or ny_global from ice_in does not match grid file"
+               endif
+            endif
+
+         end subroutine test_var_size
 
          subroutine test_var_unchanged(fid, varid, var, errorflag) 
 
@@ -56,17 +89,20 @@
             call gather_global(grid_var_glob, var%gv, master_task, distrb_info)
 
             if (my_task == master_task) then
-               if ( .not. var%optional) then 
-                  status = nf90_get_var(fid, varid, test_var)
-                  if (status/=NF90_NOERR) call handle_nc_err(status, "Could not load variable '"//trim(var%fn)//"' from grid file")
-
+               status = nf90_get_var(fid, varid, test_var)
+               write (6,*) .not.(var%optional)
+               if (status==NF90_NOERR) then
                   if (all(grid_var_glob==test_var)) then
                      write (6,*) "LOG: "//trim(var%fn)//" in cice matches original grid file"
                      errorflag = passflag
                   else
                      errorflag = failflag
                   endif
-               endif
+               else
+                  call handle_nc_err(status, \
+                     "Could not load variable '"//trim(var%fn)//"' from grid file")
+                  errorflag = failflag
+               endif             
             endif
 
          end subroutine test_var_unchanged
@@ -92,9 +128,9 @@
       use ice_exit, only: abort_ice, end_run
       use ice_timers, only: timer_total, init_ice_timers, ice_timer_start
       use test_grid_var
-
+      
       use CICE_InitGrid
-      use netcdf
+      use netcdf, only: nf90_open, nf90_inq_varid, NF90_NOERR, NF90_NOWRITE
       implicit none
 
       integer(kind=int_kind) :: n,m !,ny,nm,nd,nf1,nf2,xadd,nfa,nfb,nfc,ns1,ns2
@@ -103,12 +139,11 @@
       integer(kind=int_kind), parameter :: ntests = 9 , ngridvar = 10
       character(len=8)  :: errorflag0,errorflag(1:ntests),errorflagtmp
       character(len=32) :: testname(ntests)
-      integer :: fid , varid, status , test_nx, test_ny, itest
-      integer, dimension(nf90_max_var_dims) :: dimids
-
-      
-
+      integer :: fid , varid, status , itest
       type(t_grid_var) :: grid_vars(ngridvar)
+
+
+      call cice_init
 
 
       if (my_task == master_task) then
@@ -124,9 +159,7 @@
       testname(:) = ''
       ! testname(1) = 'compute_elapsed_days'
 
-      call cice_init
       call init_grid1 ! domain distribution
-
       ! -------------------
       ! init_grid1 creates a distribution of blocks on each task
       ! this needs its own test
@@ -145,6 +178,8 @@
 
       itest = 1 
 
+      ! These are the fields in popgrid_nc subroutine
+
       grid_vars(1)%fn = "ulat"
       grid_vars(1)%gv =  ULAT
       grid_vars(2)%fn = "ulon"
@@ -154,7 +189,16 @@
       grid_vars(3)%fn = "angleT"
       grid_vars(3)%gv =  ANGLET
       grid_vars(3)%optional = .True.
-      
+      grid_vars(4)%fn = "TLON"
+      grid_vars(4)%gv =  TLON
+      grid_vars(4)%optional = .True.
+      grid_vars(5)%fn = "TLAT"
+      grid_vars(5)%gv =  TLAT
+      grid_vars(5)%optional = .True.
+      grid_vars(6)%fn = "htn"
+      grid_vars(6)%gv =  htn
+      grid_vars(7)%fn = "hte"
+      grid_vars(7)%gv =  hte
 
       if (my_task == master_task) then
          allocate(test_var(nx_global, ny_global))
@@ -171,36 +215,25 @@
          status = nf90_open(grid_file, NF90_NOWRITE, fid)
          if (status/=NF90_NOERR) call handle_nc_err(status, "Could not open "//grid_file//" for testing")
 
-         do itest = 1 , 3
+         do itest = 1 , 7
 
             if (my_task == master_task) write (6,*) "LOG: finding "//trim(grid_vars(iTest)%fn)//" var"
             status = nf90_inq_varid(fid, grid_vars(iTest)%fn, varid) 
-            if (status/=NF90_NOERR) call handle_nc_err(status, "Could not find variable '"//trim(grid_vars(iTest)%fn)//"' in "//grid_file )
-
-            status = nf90_inquire_variable(fid, varid, dimids = dimids)
-            if(status /= NF90_NOERR) call handle_nc_err(status, "Inq var error ")
-            status = nf90_inquire_dimension(fid, dimids(1), len = test_nx)
-            if(status /= NF90_NOERR) call handle_nc_err(status, "Inq var error  ")
-            status = nf90_inquire_dimension(fid, dimids(2), len = test_ny)
-            if(status /= NF90_NOERR) call handle_nc_err(status, "Inq var error ")
-
-            if (my_task == master_task) write (6,*) "LOG: checking size of "//trim(grid_vars(iTest)%fn)
-            if (test_nx/=nx_global .or. test_ny/=ny_global) then
-               if (my_task == master_task) then
-                  errorflag(itest) = failflag
-                  write (6,*) "Error in test ",itest," nx_global or ny_global from ice_in does not match grid file"
+            if (status/=NF90_NOERR) then
+               if (grid_vars(iTest)%optional) then
+                  if (my_task == master_task) write (6,*) "LOG: skipping "//trim(grid_vars(iTest)%fn)
+                  
+                  !To-do: confirm CICE has internally calculated good values
+                  errorflag(itest) = skipflag
+               else
+                  call handle_nc_err(status, "Could not find variable '"//trim(grid_vars(iTest)%fn)//"' in "//grid_file )
                endif
-            else
-
+            else              
+               call test_var_size(fid, varid, grid_vars(iTest), errorflag(itest))
                call test_var_unchanged(fid, varid, grid_vars(iTest), errorflag(itest)) 
-
-            
             endif
-
          enddo
-
       endif
-
 
       deallocate(grid_var_glob)
       deallocate(test_var)
@@ -209,11 +242,12 @@
          write(6,*) ' '
          write(6,*) 'GRIDLOADCHK COMPLETED SUCCESSFULLY'
          do n = 1,ntests
-            if (errorflag(n) == passflag) then
-               write(6,*) 'PASS '!,trim(stringflag(n))
-            else
-               write(6,*) 'FAIL '!,trim(stringflag(n))
-            endif
+            write(6,*) errorflag(n)
+            ! if (errorflag(n) == passflag) then
+            !    write(6,*) 'PASS '!,trim(stringflag(n))
+            ! else
+            !    write(6,*) 'FAIL '!,trim(stringflag(n))
+            ! endif
          enddo
          if (errorflag0 == passflag) then
             write(6,*) 'GRIDLOADCHK TEST COMPLETED SUCCESSFULLY'
@@ -228,6 +262,11 @@
       !-----------------------------------------------------------------
       ! Gracefully end
       !-----------------------------------------------------------------
+
+      call dealloc_grid         ! deallocate temporary grid arrays
+      !       if (my_task == master_task) then
+      !          call ice_memusage_print(nu_diag,subname//':end')
+      !       endif
 
       call end_run()
 
