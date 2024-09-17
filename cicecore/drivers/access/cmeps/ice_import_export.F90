@@ -460,6 +460,8 @@ contains
     call icepack_query_parameters(tfrz_option_out=tfrz_option)
     call icepack_query_parameters(ktherm_out=ktherm)
 
+    call log_state_info(importState, fldsToIce, fldsToIce_num, importState)
+
     if (io_dbug > 5) then
        write(msgString,'(A,i8)')trim(subname)//' tfrz_option = ' &
             // trim(tfrz_option)//', ktherm = ',ktherm
@@ -837,12 +839,13 @@ contains
   end subroutine ice_import
 
   !===============================================================================
-  subroutine ice_export(importState, exportState, rc )
+  subroutine ice_export(importState, exportState, cpl_dt, rc )
 
     use ice_scam, only : single_column
 
     ! input/output variables
     type(ESMF_State), intent(inout) :: importState, exportState
+    integer         , intent(in)    :: cpl_dt
     integer         , intent(out)   :: rc
 
     ! local variables
@@ -1286,7 +1289,7 @@ contains
        end do
     end if
 
-    call ice_export_access(importState, exportState, ailohi, rc)
+    call ice_export_access(importState, exportState, ailohi, cpl_dt, rc)
     first_call = .false.
     call log_state_info(exportState, fldsFrIce, fldsFrIce_num, exportState)
 
@@ -1348,8 +1351,8 @@ contains
    real :: lo, hi
    real(ESMF_KIND_R8), pointer :: esmf_arr(:)
 
-   call ESMF_StateGet(exportState, itemName='ice_mask', field=field)
-   call ESMF_FieldGet(field, farrayptr=sea_ice_mask)
+   ! call ESMF_StateGet(exportState, itemName='ice_mask', field=field)
+   ! call ESMF_FieldGet(field, farrayptr=sea_ice_mask)
    
    do i = 1,field_num
      
@@ -1367,17 +1370,16 @@ contains
             lo = minval(fld_ptr2)
             hi = maxval(fld_ptr2)
             write (tmpString, *) nan_check(pack(fld_ptr2, .true.))
-            call ESMF_LogWrite(trim(field_list(i)%stdname) // ' any nans: ' // trim(tmpString), ESMF_LOGMSG_DEBUG, rc=rc)
 
          else
             call ESMF_FieldGet(field, farrayptr=fld_ptr1)
             lo = minval(fld_ptr1)
             hi = maxval(fld_ptr1)
             write (tmpString, *) nan_check(fld_ptr1)
-            call ESMF_LogWrite(trim(field_list(i)%stdname) // ' any nans: ' // trim(tmpString), ESMF_LOGMSG_DEBUG, rc=rc)
 
          end if
 
+         call ESMF_LogWrite(trim(field_list(i)%stdname) // ' any nans: ' // trim(tmpString), ESMF_LOGMSG_DEBUG, rc=rc)
          write (tmpString, *) lo
          call ESMF_LogWrite(trim(field_list(i)%stdname) // ' min: ' // trim(tmpString), ESMF_LOGMSG_DEBUG, rc=rc)
          write (tmpString, *) hi
@@ -2026,7 +2028,7 @@ contains
   end subroutine ice_advertise_fields_access_export
 
 
-  subroutine ice_export_access(importState, exportState, ailohi, rc)
+  subroutine ice_export_access(importState, exportState, ailohi, cpl_dt, rc)
 
    use ice_scam, only : single_column
    use ice_domain_size, only: nslyr, nilyr
@@ -2040,6 +2042,7 @@ contains
 
    ! input/output variables
    type(ESMF_State), intent(inout) :: importState, exportState
+   integer         , intent(in)    :: cpl_dt
    integer         , intent(out)   :: rc
 
    real    (kind=dbl_kind) :: ailohi(nx_block,ny_block,max_blocks)
@@ -2164,7 +2167,7 @@ contains
                   licefw = 0.0
                end if
                
-               licefw = 330.0 * licefw / 3600.0 ! change to constants
+               licefw = licefw / cpl_dt
 
                liceht = -licefw * Lfresh
                
