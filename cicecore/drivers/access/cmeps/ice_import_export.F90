@@ -592,9 +592,9 @@ contains
                trcrn(i,j,nt_Tsfc,k,iblk) = max(trcrn(i,j,nt_Tsfc,k,iblk), -60.0)
                trcrn(i,j,nt_Tsfc,k,iblk) = min(trcrn(i,j,nt_Tsfc,k,iblk), 0.0)
 
-               ! fsurfn_f(i,j,k,iblk) = fsurfn_f(i,j,k,iblk) * aicen(i,j,k,iblk)
-               ! flatn_f(i,j,k,iblk) = flatn_f(i,j,k,iblk) * aicen(i,j,k,iblk)
-               ! fcondtopn_f(i,j,k,iblk) = fcondtopn_f(i,j,k,iblk) * aicen(i,j,k,iblk)
+               fsurfn_f(i,j,k,iblk) = fsurfn_f(i,j,k,iblk) * aicen(i,j,k,iblk)
+               flatn_f(i,j,k,iblk) = flatn_f(i,j,k,iblk) * aicen(i,j,k,iblk)
+               fcondtopn_f(i,j,k,iblk) = fcondtopn_f(i,j,k,iblk) * aicen(i,j,k,iblk)
 
             end do
          end do
@@ -2143,12 +2143,7 @@ contains
       do j = jlo, jhi
          do i = ilo, ihi
             n = n + 1
-            
-            ! licefw = um_icenth(n)
-            ! licefw = licefw - lice_nth(i,j,iblk)
-            ! licefw = max(0.0, licefw)
-            ! licefw = licefw * msk_nth(i,j,iblk)
-            ! licefw = licefw / amsk_nth(i,j,iblk) 
+
             if (tmask(i,j,iblk)) then
 
                if (lice_nth(i,j,iblk) == 0.0) then
