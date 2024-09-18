@@ -2166,8 +2166,8 @@ contains
 
                liceht = -licefw * Lfresh
                
-               fresh_ptr(n) = fresh_ptr(n) + licefw
-               fhocn_ptr(n) = fhocn_ptr(n) + liceht
+               ! fresh_ptr(n) = fresh_ptr(n) + licefw
+               ! fhocn_ptr(n) = fhocn_ptr(n) + liceht
 
                lice_nth(i,j,iblk) = um_icenth(n)
                lice_sth(i,j,iblk) = um_icesth(n)
