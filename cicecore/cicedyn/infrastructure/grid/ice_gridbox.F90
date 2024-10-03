@@ -36,8 +36,8 @@ module ice_gridbox
             TLAT, TLON
 
         real (kind=dbl_kind), dimension (:,:,:,:), intent(out) :: &
-        lonu_bounds, & ! longitude of gridbox corners for U point
-        latu_bounds    ! latitude of gridbox corners for U point
+            lonu_bounds, & ! longitude of gridbox corners for U point
+            latu_bounds    ! latitude of gridbox corners for U point
 
         real (kind=dbl_kind), dimension (:,:,:,:), intent(inout) :: lont_bounds
 
