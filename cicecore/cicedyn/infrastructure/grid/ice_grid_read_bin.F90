@@ -1,4 +1,4 @@
-module ice_grid_bin
+module ice_grid_read_bin
 
     use ice_kinds_mod
     use ice_broadcast, only: broadcast_scalar
@@ -325,4 +325,4 @@ module ice_grid_bin
   
     end subroutine cpomgrid
 
-end module ice_grid_bin
+end module ice_grid_read_bin

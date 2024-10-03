@@ -51,11 +51,11 @@
          grid_average_X2YF, grid_average_X2Y_2
       use ice_grid_latlon, only: Tlatlon, NElatlon
       use ice_grid_idealised, only: rectgrid, rectgrid_scale_dxdy
-      use ice_grid_bin, only: cpomgrid, popgrid
+      use ice_grid_read_bin, only: cpomgrid, popgrid
 #ifdef USE_NETCDF
-      use ice_grid_nc, only: popgrid_nc
+      use ice_grid_read_nc, only: popgrid_nc
 #ifdef CESMCOUPLED
-      use ice_grid_nc, only: latlongrid
+      use ice_grid_read_nc, only: latlongrid
 #endif
 #endif
 

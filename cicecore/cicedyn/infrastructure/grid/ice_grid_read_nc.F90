@@ -1,4 +1,4 @@
-module ice_grid_nc
+module ice_grid_read_nc
 
     use ice_kinds_mod
     use ice_broadcast, only: broadcast_scalar
@@ -553,4 +553,4 @@ module ice_grid_nc
     end subroutine latlongrid
 #endif
 
-end module ice_grid_nc
+end module ice_grid_read_nc
