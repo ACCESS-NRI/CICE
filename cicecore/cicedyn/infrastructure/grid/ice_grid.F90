@@ -497,7 +497,8 @@
          endif
 #ifdef CESMCOUPLED
       elseif (trim(grid_type) == 'latlon') then
-         call latlongrid(kmt_file, dxT, dyT, dxU, dyU, dxN, dyN, dxE, dyE, HTE, HTN, &
+         call latlongrid(kmt_file, &
+            dxT, dyT, dxU, dyU, dxN, dyN, dxE, dyE, HTE, HTN, &
             tarea, uarea, tarear, uarear, &
             ULON, ULAT, TLON, TLAT, ANGLE, ANGLET, ocn_gridcell_frac, hm, kmt)        
             ! lat lon grid for sequential CESM (CAM mode)
@@ -523,7 +524,8 @@
          ! original method with addition to use namelist lat/lon reference
          call rectgrid(save_ghte_ghtn, scale_dxdy, dxrect, dyrect, &
             G_HTE, G_HTN, kmt_type, lonrefrect, latrefrect, hm, kmt, angle, &
-            ULON, ULAT, dxT, dyT, dxU, dyU, dxN, dyN, dxE, dyE, HTE, HTN )         
+            ULON, ULAT, &
+            dxT, dyT, dxU, dyU, dxN, dyN, dxE, dyE, HTE, HTN )         
       endif
 
       !-----------------------------------------------------------------
