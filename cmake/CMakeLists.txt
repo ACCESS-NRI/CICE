@@ -1,6 +1,17 @@
 cmake_minimum_required(VERSION 3.18)
 # CMake version compatibility
 
+#function to put somewhere neater
+function(add_fortran_library LIB MOD_DIR)
+    add_library(${LIB} ${ARGN})
+
+    get_target_property(LIB_DIR ${LIB} BINARY_DIR)
+    set_target_properties(${LIB} PROPERTIES Fortran_MODULE_DIRECTORY ${LIB_DIR}/${MOD_DIR})
+
+    target_include_directories(${LIB} INTERFACE "$<BUILD_INTERFACE:${LIB_DIR}/${MOD_DIR}>")
+  endfunction(add_fortran_library)
+
+
 #[==============================================================================[
 #                         Basic project definition                              #
 #]==============================================================================]
@@ -62,8 +73,8 @@ if(OpenMP_Fortran_FOUND)
   target_link_libraries(OM3_cice PRIVATE OpenMP::OpenMP_Fortran)
 endif()
 
-set(CICE_CORE "${SRC_DIR}/cicecore/")
-set(ICEPACK "${SRC_DIR}/icepack/")
+set(CICE_CORE "${CMAKE_SOURCE_DIR}/../cicecore")
+set(ICEPACK "${CMAKE_SOURCE_DIR}/../icepack")
 
 target_sources(OM3_cice PRIVATE
   # Shared List:
