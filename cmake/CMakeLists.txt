@@ -196,10 +196,6 @@ elseif(OM3_CICE_IO MATCHES "Binary")
   )
 endif()
 
-add_patched_source(OM3_cice ${CICE_CORE}/cicedyn/infrastructure/ice_domain.F90)
-add_patched_source(OM3_cice ${CICE_CORE}/shared/ice_distribution.F90)
-add_patched_source(OM3_cice ${CICE_CORE}/cicedyn/general/ice_init.F90)
-
 ### Install and Export
 
 ## Library
