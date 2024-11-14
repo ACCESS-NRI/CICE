@@ -2035,7 +2035,7 @@ contains
    use icepack_therm_shared, only: calculate_Tin_from_qin
    use ice_state, only: aicen, vsnon, vicen, trcrn
    ! use icepack_therm_itd, only: nt_hpnd, 
-   use icepack_tracers, only: nt_qsno, nt_hpnd, nt_sice, nt_qice
+   use icepack_tracers, only: nt_qsno, nt_hpnd, nt_apnd, nt_sice, nt_qice
    use ice_arrays_column, only: apeffn
 
    ! input/output variables
@@ -2051,6 +2051,7 @@ contains
    integer                 :: ilo, ihi, jlo, jhi                   ! beginning and end of physical domain
    logical                 :: flag
    real    (kind=dbl_kind), allocatable :: tempfld(:,:,:), tempfld1(:,:,:), ki_fld(:,:,:,:), hi1_fld(:,:,:,:)
+   real    (kind=dbl_kind), allocatable :: pndfn_scaled(:,:,:,:), pndtn_scaled(:,:,:,:)
    real(kind=dbl_kind), pointer :: fhocn_ptr(:), fresh_ptr(:), um_icenth(:), um_icesth(:)
    real    (kind=dbl_kind) :: hs1, hi1, Tmlt1, ki, rnslyr, rnilyr, licefw, liceht
    character(len=*),parameter :: subname = 'ice_export_access'
@@ -2064,20 +2065,30 @@ contains
    if (icepack_warnings_aborted()) call abort_ice(error_message=subname, &
        file=u_FILE_u, line=__LINE__)
 
-   ! Create a temporary field
+   ! Create temporary fields
    allocate(tempfld(nx_block,ny_block,nblocks))
    allocate(tempfld1(nx_block,ny_block,nblocks))
-   
+   allocate(pndfn_scaled(nx_block,ny_block,ncat,nblocks))
+   allocate(pndtn_scaled(nx_block,ny_block,ncat,nblocks))
    
    do n = 1, ncat
       call state_setexport(exportState, 'ia_aicen', input=aicen , lmask=tmask, ifrac=ailohi, rc=rc, index=n, ungridded_index=n)
       call state_setexport(exportState, 'ia_snown', input=vsnon , lmask=tmask, ifrac=ailohi, rc=rc, index=n, ungridded_index=n)
       call state_setexport(exportState, 'ia_thikn', input=vicen , lmask=tmask, ifrac=ailohi, rc=rc, index=n, ungridded_index=n)
-      call state_setexport(exportState, 'ia_pndfn', input=apeffn, lmask=tmask, ifrac=ailohi, rc=rc, index=n, ungridded_index=n)
-      call state_setexport(exportState, 'ia_pndtn', input=trcrn(:,:,nt_hpnd,:,:), lmask=tmask, ifrac=ailohi, rc=rc, index=n, ungridded_index=n)
    end do
 
    call state_setexport(exportState, 'sstfrz', input=Tf , lmask=tmask, ifrac=ailohi, rc=rc)
+
+   ! To conserve pond areas, scale by ice fractions before mapping. Unscale in the atmosphere after mapping
+   pndfn_scaled(:,:,:,:) = apeffn(:,:,:,:) * aicen(:,:,:,:)
+   ! To conserve pond volumes, scale by the pond gridcell fraction before mapping. Unscale in the atmosphere
+   ! after mapping
+   pndtn_scaled(:,:,:,:) = trcrn(:,:,nt_hpnd,:,:) * apeffn(:,:,:,:) * aicen(:,:,:,:)
+
+   do n = 1, ncat
+      call state_setexport(exportState, 'ia_pndfn', input=pndfn_scaled, lmask=tmask, ifrac=ailohi, rc=rc, index=n, ungridded_index=n)
+      call state_setexport(exportState, 'ia_pndtn', input=pndtn_scaled, lmask=tmask, ifrac=ailohi, rc=rc, index=n, ungridded_index=n)
+   end do
 
    rnslyr = real(nslyr,kind=dbl_kind)      
    rnilyr = real(nilyr,kind=dbl_kind)  
