@@ -1,22 +1,15 @@
 cmake_minimum_required(VERSION 3.18)
-# CMake version compatibility
-
-#function to put somewhere neater
-function(add_fortran_library LIB MOD_DIR)
-    add_library(${LIB} ${ARGN})
-
-    get_target_property(LIB_DIR ${LIB} BINARY_DIR)
-    set_target_properties(${LIB} PROPERTIES Fortran_MODULE_DIRECTORY ${LIB_DIR}/${MOD_DIR})
-
-    target_include_directories(${LIB} INTERFACE "$<BUILD_INTERFACE:${LIB_DIR}/${MOD_DIR}>")
-  endfunction(add_fortran_library)
-
 
 #[==============================================================================[
 #                         Basic project definition                              #
 #]==============================================================================]
 
 project(CICE6 DESCRIPTION "CICE6" LANGUAGES C Fortran)
+
+list(APPEND CMAKE_MODULE_PATH ${CMAKE_SOURCE_DIR})
+include(GNUInstallDirs)
+include(FortranLib)
+
 
 # Common compiler flags and definitions
 if(CMAKE_Fortran_COMPILER_ID MATCHES "GNU")
@@ -50,6 +43,17 @@ add_compile_definitions(
   CESMCOUPLED
 )
 
+## Fortran modules path; currently this is simply set to be the include dir
+set(CMAKE_INSTALL_MODULEDIR ${CMAKE_INSTALL_INCLUDEDIR}
+  CACHE STRING
+  "Fortran module installation path (Not a cmake native variable)"
+)
+
+find_package(Access3Share)
+find_package(FoX 4.1.2 REQUIRED)
+find_package(NetCDF 4.7.3 REQUIRED Fortran)
+find_package(PIO 2.5.3 REQUIRED COMPONENTS C Fortran)
+
 ### Targets
 
 ## CICE library
@@ -61,7 +65,7 @@ if(OM3_CICE_IO MATCHES "^(NetCDF|PIO)$")
 endif()
 target_link_libraries(OM3_cice
   PUBLIC esmf
-  PRIVATE AccessOM3::cdeps_common AccessOM3::nuopc_cap_share AccessOM3::share AccessOM3::timing
+  PRIVATE AccessOM3::nuopc_cap_share AccessOM3::share AccessOM3::timing AccessOM3::cdeps-common
 )
 if(OM3_CICE_IO MATCHES "^(NetCDF|PIO)$")
   target_link_libraries(OM3_cice PRIVATE NetCDF::NetCDF_Fortran)
@@ -88,6 +92,7 @@ target_sources(OM3_cice PRIVATE
   ${CICE_CORE}/shared/ice_restart_column.F90
   ${CICE_CORE}/shared/ice_restart_shared.F90
   ${CICE_CORE}/shared/ice_spacecurve.F90
+  ${CICE_CORE}/shared/ice_distribution.F90
 
   # Analysis
   ${CICE_CORE}/cicedyn/analysis/ice_diagnostics.F90
@@ -112,6 +117,7 @@ target_sources(OM3_cice PRIVATE
   ${CICE_CORE}/cicedyn/dynamics/ice_transport_remap.F90
 
   # General
+  ${CICE_CORE}/cicedyn/general/ice_init.F90
   ${CICE_CORE}/cicedyn/general/ice_flux.F90
   ${CICE_CORE}/cicedyn/general/ice_flux_bgc.F90
   ${CICE_CORE}/cicedyn/general/ice_forcing.F90
@@ -127,6 +133,7 @@ target_sources(OM3_cice PRIVATE
   ${CICE_CORE}/cicedyn/infrastructure/ice_read_write.F90
   ${CICE_CORE}/cicedyn/infrastructure/ice_restart_driver.F90
   ${CICE_CORE}/cicedyn/infrastructure/ice_restoring.F90
+  ${CICE_CORE}/cicedyn/infrastructure/ice_domain.F90
 
   # Icepack
   ${ICEPACK}/columnphysics/icepack_aerosol.F90
@@ -174,19 +181,23 @@ target_sources(OM3_cice PRIVATE
   ${CICE_CORE}/cicedyn/infrastructure/comm/mpi/ice_global_reductions.F90
   ${CICE_CORE}/cicedyn/infrastructure/comm/mpi/ice_reprosum.F90
   ${CICE_CORE}/cicedyn/infrastructure/comm/mpi/ice_timers.F90
-
-  # NUOPC CMEPS driver
-  ${CICE_CORE}/drivers/nuopc/cmeps/CICE_FinalMod.F90
-  ${CICE_CORE}/drivers/nuopc/cmeps/CICE_InitMod.F90
-  ${CICE_CORE}/drivers/nuopc/cmeps/CICE_RunMod.F90
-  ${CICE_CORE}/drivers/nuopc/cmeps/cice_wrapper_mod.F90
-  ${CICE_CORE}/drivers/nuopc/cmeps/ice_comp_nuopc.F90
-  ${CICE_CORE}/drivers/nuopc/cmeps/ice_import_export.F90
-  ${CICE_CORE}/drivers/nuopc/cmeps/ice_mesh_mod.F90
-  ${CICE_CORE}/drivers/nuopc/cmeps/ice_prescribed_mod.F90
-  ${CICE_CORE}/drivers/nuopc/cmeps/ice_scam.F90
-  ${CICE_CORE}/drivers/nuopc/cmeps/ice_shr_methods.F90
 )
+
+if(OM3_LIB_INSTALL)
+  target_sources(OM3_cice PRIVATE
+    # NUOPC CMEPS driver
+    ${CICE_CORE}/drivers/nuopc/cmeps/CICE_FinalMod.F90
+    ${CICE_CORE}/drivers/nuopc/cmeps/CICE_InitMod.F90
+    ${CICE_CORE}/drivers/nuopc/cmeps/CICE_RunMod.F90
+    ${CICE_CORE}/drivers/nuopc/cmeps/cice_wrapper_mod.F90
+    ${CICE_CORE}/drivers/nuopc/cmeps/ice_comp_nuopc.F90
+    ${CICE_CORE}/drivers/nuopc/cmeps/ice_import_export.F90
+    ${CICE_CORE}/drivers/nuopc/cmeps/ice_mesh_mod.F90
+    ${CICE_CORE}/drivers/nuopc/cmeps/ice_prescribed_mod.F90
+    ${CICE_CORE}/drivers/nuopc/cmeps/ice_scam.F90
+    ${CICE_CORE}/drivers/nuopc/cmeps/ice_shr_methods.F90
+  )
+endif()
 
 # Select IO source files based on CICE_IO
 if(OM3_CICE_IO MATCHES "NetCDF")
@@ -225,13 +236,13 @@ if(OM3_LIB_INSTALL)
   target_include_directories(OM3_cice PUBLIC "$<INSTALL_INTERFACE:${CMAKE_INSTALL_MODULEDIR}/access-cice>")
   get_target_property(cice_moddir OM3_cice Fortran_MODULE_DIRECTORY)
   install(FILES ${cice_moddir}/ice_comp_nuopc.mod
-    DESTINATION ${CMAKE_INSTALL_MODULEDIR}/access-cice
+    DESTINATION ${CMAKE_INSTALL_MODULEDIR}/CICE
     COMPONENT AccessOM3_Development
   )
   install(EXPORT AccessOM3cice_Targets
     FILE AccessOM3ciceTargets.cmake
     NAMESPACE AccessOM3::
-    DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/AccessOM3
+    DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/CICE
   )
 
 endif()
