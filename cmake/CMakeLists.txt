@@ -69,10 +69,12 @@ target_compile_definitions(cicelib PRIVATE FORTRANUNDERSCORE ncdf)
 if(CICE_IO MATCHES "^(NetCDF|PIO)$")
   target_compile_definitions(cicelib PRIVATE USE_NETCDF)
 endif()
-target_link_libraries(cicelib
-  PUBLIC esmf
-  PRIVATE Access3::nuopc_cap_share Access3::share Access3::timing Access3::cdeps-common
-)
+if(ACCESS3_LIB_INSTALL)
+  target_link_libraries(cicelib
+    PUBLIC esmf
+    PRIVATE Access3Share::nuopc_cap_share Access3Share::share Access3Share::timing Access3Share::cdeps-common
+  )
+endif()
 if(CICE_IO MATCHES "^(NetCDF|PIO)$")
   target_link_libraries(cicelib PRIVATE NetCDF::NetCDF_Fortran)
   if(CICE_IO MATCHES "PIO")
