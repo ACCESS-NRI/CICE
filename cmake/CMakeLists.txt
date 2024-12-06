@@ -54,23 +54,24 @@ set(CMAKE_INSTALL_MODULEDIR ${CMAKE_INSTALL_INCLUDEDIR}
 find_package(Access3Share)
 find_package(FoX 4.1.2 REQUIRED)
 find_package(NetCDF 4.7.3 REQUIRED Fortran)
-find_package(PIO 2.5.3 REQUIRED COMPONENTS C Fortran)
-
+if(CICE_IO MATCHES "PIO")
+  find_package(PIO 2.5.3 REQUIRED COMPONENTS C Fortran)
+endif()
 ### Targets
 
 ## CICE library
 add_fortran_library(cicelib mod STATIC)
 target_compile_definitions(cicelib PRIVATE FORTRANUNDERSCORE ncdf)
-if(CICE6_IO MATCHES "^(NetCDF|PIO)$")
+if(CICE_IO MATCHES "^(NetCDF|PIO)$")
   target_compile_definitions(cicelib PRIVATE USE_NETCDF)
 endif()
 target_link_libraries(cicelib
   PUBLIC esmf
   PRIVATE AccessOM3::nuopc_cap_share AccessOM3::share AccessOM3::timing AccessOM3::cdeps-common
 )
-if(OM3_CICE_IO MATCHES "^(NetCDF|PIO)$")
+if(CICE_IO MATCHES "^(NetCDF|PIO)$")
   target_link_libraries(cicelib PRIVATE NetCDF::NetCDF_Fortran)
-  if(OM3_CICE_IO MATCHES "PIO")
+  if(CICE_IO MATCHES "PIO")
     target_link_libraries(cicelib PRIVATE PIO::PIO_Fortran)
   endif()
 endif()
@@ -201,18 +202,18 @@ if(OM3_LIB_INSTALL)
 endif()
 
 # Select IO source files based on CICE_IO
-if(OM3_CICE_IO MATCHES "NetCDF")
+if(CICE_IO MATCHES "NetCDF")
   target_sources(cicelib PRIVATE
     ${CICE_CORE}/cicedyn/infrastructure/io/io_netcdf/ice_history_write.F90
     ${CICE_CORE}/cicedyn/infrastructure/io/io_netcdf/ice_restart.F90
   )
-elseif(OM3_CICE_IO MATCHES "PIO")
+elseif(CICE_IO MATCHES "PIO")
   target_sources(cicelib PRIVATE
     ${CICE_CORE}/cicedyn/infrastructure/io/io_pio2/ice_history_write.F90
     ${CICE_CORE}/cicedyn/infrastructure/io/io_pio2/ice_pio.F90
     ${CICE_CORE}/cicedyn/infrastructure/io/io_pio2/ice_restart.F90
   )
-elseif(OM3_CICE_IO MATCHES "Binary")
+elseif(CICE_IO MATCHES "Binary")
   target_sources(cicelib PRIVATE
     ${CICE_CORE}/cicedyn/infrastructure/io/io_binary/ice_history_write.F90
     ${CICE_CORE}/cicedyn/infrastructure/io/io_binary/ice_restart.F90
@@ -222,7 +223,7 @@ endif()
 ### Install and Export
 
 ## Library
-if(OM3_LIB_INSTALL)
+if(ACCESS3_LIB_INSTALL)
   set_target_properties(cicelib PROPERTIES
     OUTPUT_NAME access-cice
     EXPORT_NAME cice
