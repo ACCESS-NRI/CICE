@@ -51,9 +51,13 @@ set(CMAKE_INSTALL_MODULEDIR ${CMAKE_INSTALL_INCLUDEDIR}
   "Fortran module installation path (Not a cmake native variable)"
 )
 
-find_package(Access3Share)
-find_package(FoX 4.1.2 REQUIRED)
-find_package(NetCDF 4.7.3 REQUIRED Fortran)
+if(ACCESS3_LIB_INSTALL)
+  find_package(Access3Share)
+  find_package(FoX 4.1.2 REQUIRED)
+endif()
+if(CICE_IO MATCHES "^(NetCDF|PIO)$")
+  find_package(NetCDF 4.7.3 REQUIRED Fortran)
+endif()
 if(CICE_IO MATCHES "PIO")
   find_package(PIO 2.5.3 REQUIRED COMPONENTS C Fortran)
 endif()
@@ -67,7 +71,7 @@ if(CICE_IO MATCHES "^(NetCDF|PIO)$")
 endif()
 target_link_libraries(cicelib
   PUBLIC esmf
-  PRIVATE AccessOM3::nuopc_cap_share AccessOM3::share AccessOM3::timing AccessOM3::cdeps-common
+  PRIVATE Access3::nuopc_cap_share Access3::share Access3::timing Access3::cdeps-common
 )
 if(CICE_IO MATCHES "^(NetCDF|PIO)$")
   target_link_libraries(cicelib PRIVATE NetCDF::NetCDF_Fortran)
@@ -185,7 +189,7 @@ target_sources(cicelib PRIVATE
   ${CICE_CORE}/cicedyn/infrastructure/comm/mpi/ice_timers.F90
 )
 
-if(OM3_LIB_INSTALL)
+if(ACCESS3_LIB_INSTALL)
   target_sources(cicelib PRIVATE
     # NUOPC CMEPS driver
     ${CICE_CORE}/drivers/nuopc/cmeps/CICE_FinalMod.F90
@@ -229,9 +233,9 @@ if(ACCESS3_LIB_INSTALL)
     EXPORT_NAME cice
   )
   install(TARGETS cicelib
-    EXPORT AccessOM3cice_Targets
-    LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR} COMPONENT AccessOM3_RunTime NAMELINK_COMPONENT AccessOM3_Development
-    ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR} COMPONENT AccessOM3_Development
+    EXPORT Access3cice_Targets
+    LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR} COMPONENT Access3_RunTime NAMELINK_COMPONENT Access3_Development
+    ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR} COMPONENT Access3_Development
   )
   # Fortran module files are a special case, as currently there is no standard
   # way of handling them in CMake
@@ -239,11 +243,11 @@ if(ACCESS3_LIB_INSTALL)
   get_target_property(cice_moddir cicelib Fortran_MODULE_DIRECTORY)
   install(FILES ${cice_moddir}/ice_comp_nuopc.mod
     DESTINATION ${CMAKE_INSTALL_MODULEDIR}/CICE
-    COMPONENT AccessOM3_Development
+    COMPONENT Access3_Development
   )
-  install(EXPORT AccessOM3cice_Targets
-    FILE AccessOM3ciceTargets.cmake
-    NAMESPACE AccessOM3::
+  install(EXPORT Access3cice_Targets
+    FILE Access3ciceTargets.cmake
+    NAMESPACE Access3::
     DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/CICE
   )
 
