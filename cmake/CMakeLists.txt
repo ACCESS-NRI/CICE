@@ -39,9 +39,11 @@ else()
   message(WARNING "C compiler with ID ${CMAKE_C_COMPILER_ID} will be used with CMake default options")
 endif()
 
-add_compile_definitions(
-  CESMCOUPLED
-)
+if (CESMCOUPLED)
+  add_compile_definitions(
+    CESMCOUPLED
+  )
+endif()
 
 ## Fortran modules path; currently this is simply set to be the include dir
 set(CMAKE_INSTALL_MODULEDIR ${CMAKE_INSTALL_INCLUDEDIR}
@@ -57,30 +59,29 @@ find_package(PIO 2.5.3 REQUIRED COMPONENTS C Fortran)
 ### Targets
 
 ## CICE library
-add_fortran_library(OM3_cice mod STATIC)
-add_library(AccessOM3::cice ALIAS OM3_cice)
-target_compile_definitions(OM3_cice PRIVATE FORTRANUNDERSCORE ncdf)
-if(OM3_CICE_IO MATCHES "^(NetCDF|PIO)$")
-  target_compile_definitions(OM3_cice PRIVATE USE_NETCDF)
+add_fortran_library(cicelib mod STATIC)
+target_compile_definitions(cicelib PRIVATE FORTRANUNDERSCORE ncdf)
+if(CICE6_IO MATCHES "^(NetCDF|PIO)$")
+  target_compile_definitions(cicelib PRIVATE USE_NETCDF)
 endif()
-target_link_libraries(OM3_cice
+target_link_libraries(cicelib
   PUBLIC esmf
   PRIVATE AccessOM3::nuopc_cap_share AccessOM3::share AccessOM3::timing AccessOM3::cdeps-common
 )
 if(OM3_CICE_IO MATCHES "^(NetCDF|PIO)$")
-  target_link_libraries(OM3_cice PRIVATE NetCDF::NetCDF_Fortran)
+  target_link_libraries(cicelib PRIVATE NetCDF::NetCDF_Fortran)
   if(OM3_CICE_IO MATCHES "PIO")
-    target_link_libraries(OM3_cice PRIVATE PIO::PIO_Fortran)
+    target_link_libraries(cicelib PRIVATE PIO::PIO_Fortran)
   endif()
 endif()
 if(OpenMP_Fortran_FOUND)
-  target_link_libraries(OM3_cice PRIVATE OpenMP::OpenMP_Fortran)
+  target_link_libraries(cicelib PRIVATE OpenMP::OpenMP_Fortran)
 endif()
 
 set(CICE_CORE "${CMAKE_SOURCE_DIR}/../cicecore")
 set(ICEPACK "${CMAKE_SOURCE_DIR}/../icepack")
 
-target_sources(OM3_cice PRIVATE
+target_sources(cicelib PRIVATE
   # Shared List:
   ${CICE_CORE}/shared/ice_arrays_column.F90
   ${CICE_CORE}/shared/ice_calendar.F90
@@ -184,7 +185,7 @@ target_sources(OM3_cice PRIVATE
 )
 
 if(OM3_LIB_INSTALL)
-  target_sources(OM3_cice PRIVATE
+  target_sources(cicelib PRIVATE
     # NUOPC CMEPS driver
     ${CICE_CORE}/drivers/nuopc/cmeps/CICE_FinalMod.F90
     ${CICE_CORE}/drivers/nuopc/cmeps/CICE_InitMod.F90
@@ -201,18 +202,18 @@ endif()
 
 # Select IO source files based on CICE_IO
 if(OM3_CICE_IO MATCHES "NetCDF")
-  target_sources(OM3_cice PRIVATE
+  target_sources(cicelib PRIVATE
     ${CICE_CORE}/cicedyn/infrastructure/io/io_netcdf/ice_history_write.F90
     ${CICE_CORE}/cicedyn/infrastructure/io/io_netcdf/ice_restart.F90
   )
 elseif(OM3_CICE_IO MATCHES "PIO")
-  target_sources(OM3_cice PRIVATE
+  target_sources(cicelib PRIVATE
     ${CICE_CORE}/cicedyn/infrastructure/io/io_pio2/ice_history_write.F90
     ${CICE_CORE}/cicedyn/infrastructure/io/io_pio2/ice_pio.F90
     ${CICE_CORE}/cicedyn/infrastructure/io/io_pio2/ice_restart.F90
   )
 elseif(OM3_CICE_IO MATCHES "Binary")
-  target_sources(OM3_cice PRIVATE
+  target_sources(cicelib PRIVATE
     ${CICE_CORE}/cicedyn/infrastructure/io/io_binary/ice_history_write.F90
     ${CICE_CORE}/cicedyn/infrastructure/io/io_binary/ice_restart.F90
   )
@@ -222,19 +223,19 @@ endif()
 
 ## Library
 if(OM3_LIB_INSTALL)
-  set_target_properties(OM3_cice PROPERTIES
+  set_target_properties(cicelib PROPERTIES
     OUTPUT_NAME access-cice
     EXPORT_NAME cice
   )
-  install(TARGETS OM3_cice
+  install(TARGETS cicelib
     EXPORT AccessOM3cice_Targets
     LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR} COMPONENT AccessOM3_RunTime NAMELINK_COMPONENT AccessOM3_Development
     ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR} COMPONENT AccessOM3_Development
   )
   # Fortran module files are a special case, as currently there is no standard
   # way of handling them in CMake
-  target_include_directories(OM3_cice PUBLIC "$<INSTALL_INTERFACE:${CMAKE_INSTALL_MODULEDIR}/access-cice>")
-  get_target_property(cice_moddir OM3_cice Fortran_MODULE_DIRECTORY)
+  target_include_directories(cicelib PUBLIC "$<INSTALL_INTERFACE:${CMAKE_INSTALL_MODULEDIR}/access-cice>")
+  get_target_property(cice_moddir cicelib Fortran_MODULE_DIRECTORY)
   install(FILES ${cice_moddir}/ice_comp_nuopc.mod
     DESTINATION ${CMAKE_INSTALL_MODULEDIR}/CICE
     COMPONENT AccessOM3_Development
