@@ -225,14 +225,14 @@
       if (my_task == master_task) then
 #ifdef CESMCOUPLED 
             lpointer_file = 'rpointer.ice'//trim(inst_suffix)
+            if (pointer_date) then
+               ! append date to pointer filename
+               write(lpointer_file,'(a,i4.4,a,i2.2,a,i2.2,a,i5.5)') &
+                  trim(lpointer_file)//'.',myear,'-',mmonth,'-',mday,'-',msec
+            end if
 #else
             lpointer_file = pointer_file
 #endif
-         if (pointer_date) then
-            ! append date to pointer filename
-            write(lpointer_file,'(a,i4.4,a,i2.2,a,i2.2,a,i5.5)') &
-               trim(lpointer_file)//'.',myear,'-',mmonth,'-',mday,'-',msec
-         end if
          open(nu_rst_pointer,file=lpointer_file)
          write(nu_rst_pointer,'(a)') filename
          close(nu_rst_pointer)
