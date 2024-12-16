@@ -30,7 +30,8 @@ module ice_comp_nuopc
   use ice_kinds_mod      , only : dbl_kind, int_kind, char_len, char_len_long
   use ice_fileunits      , only : nu_diag, nu_diag_set, inst_index, inst_name
   use ice_fileunits      , only : inst_suffix, release_all_fileunits, flush_fileunit
-  use ice_restart_shared , only : runid, runtype, restart, use_restart_time, restart_dir, restart_file, restart_format, restart_chunksize
+  use ice_restart_shared , only : runid, runtype, restart, use_restart_time, restart_dir, restart_file, &
+                                  restart_format, restart_chunksize , pointer_date
   use ice_history        , only : accum_hist
   use ice_history_shared , only : history_format, history_chunksize
   use ice_exit           , only : abort_ice
@@ -322,6 +323,17 @@ contains
     if (isPresent .and. isSet) then
        if (trim(cvalue) .eq. '.true.') restart_eor = .true.
     endif
+
+#ifdef CESMCOUPLED
+    ! set CICE internal pointer_date variable based on nuopc settings
+    ! this appends a datestamp to the "rpointer" file (by default this is on)
+    pointer_date = .true.
+    call NUOPC_CompAttributeGet(gcomp, name="restart_pointer_append_date", value=cvalue, isPresent=isPresent, isSet=isSet, rc=rc)
+    if (ChkErr(rc,__LINE__,u_FILE_u)) return
+    if (isPresent .and. isSet) then
+       if (trim(cvalue) .eq. '.false.') pointer_date = .false.
+    endif
+#endif
 
     !----------------------------------------------------------------------------
     ! generate local mpi comm
