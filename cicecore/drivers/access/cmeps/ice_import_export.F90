@@ -13,14 +13,14 @@ module ice_import_export
   use ice_exit           , only : abort_ice
   use ice_flux           , only : strairxT, strairyT, strocnxT_iavg, strocnyT_iavg
   use ice_flux           , only : alvdr, alidr, alvdf, alidf, Tref, Qref, Uref
-  use ice_flux           , only : flat, fsens, flwout, evap, fswabs, fhocn, fswthru
+  use ice_flux           , only : flat, fsens, flwout, evap, fswabs, fhocn_ai, fswthru
   use ice_flux           , only : fswthru_vdr, fswthru_vdf, fswthru_idr, fswthru_idf
   use ice_flux           , only : send_i2x_per_cat, fswthrun_ai
   use ice_flux           , only : flatn_f, fcondtopn_f, fsurfn_f
   use ice_flux_bgc       , only : faero_atm, faero_ocn
   use ice_flux_bgc       , only : fiso_atm, fiso_ocn, fiso_evap
   use ice_flux_bgc       , only : Qa_iso, Qref_iso, HDO_ocn, H2_18O_ocn, H2_16O_ocn
-  use ice_flux           , only : fresh, fsalt, zlvl, uatm, vatm, potT, Tair, Qa
+  use ice_flux           , only : fresh_ai, fsalt_ai, zlvl, uatm, vatm, potT, Tair, Qa
   use ice_flux           , only : rhoa, swvdr, swvdf, swidr, swidf, flw, frain
   use ice_flux           , only : fsnow, uocn, vocn, sst, ss_tltx, ss_tlty, frzmlt
   use ice_flux           , only : send_i2x_per_cat
@@ -1326,11 +1326,9 @@ contains
       do j = jlo, jhi
          do i = ilo, ihi
             n = n+1
-            if (aice(i,j,iblk) > c0) then
-               fhocn_ptr(n) = fhocn_ptr(n) + aice(i,j,iblk) * fhocn(i,j,iblk) * mod2med_areacor(n) / nsteps
-               fresh_ptr(n) = fresh_ptr(n) + aice(i,j,iblk) * fresh(i,j,iblk) * mod2med_areacor(n) / nsteps
-               fsalt_ptr(n) = fsalt_ptr(n) + aice(i,j,iblk) * fsalt(i,j,iblk) * mod2med_areacor(n) / nsteps
-            end if
+            fhocn_ptr(n) = fhocn_ptr(n) + fhocn_ai(i,j,iblk) * mod2med_areacor(n) / nsteps
+            fresh_ptr(n) = fresh_ptr(n) + fresh_ai(i,j,iblk) * mod2med_areacor(n) / nsteps
+            fsalt_ptr(n) = fsalt_ptr(n) + fsalt_ai(i,j,iblk) * mod2med_areacor(n) / nsteps
          end do
       end do
    end do
