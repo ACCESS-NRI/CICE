@@ -128,7 +128,7 @@ contains
     rc = ESMF_SUCCESS
     if (io_dbug > 5) call ESMF_LogWrite(subname//' called', ESMF_LOGMSG_INFO)
 
-    call get_lice_discharge_masks_or_iceberg('lice_discharge_masks_iceberg.nc')
+   !  call get_lice_discharge_masks_or_iceberg('lice_discharge_masks_iceberg.nc')
 
     ! Determine if ice sends multiple ice category info back to mediator
     send_i2x_per_cat = .false.
@@ -2131,50 +2131,50 @@ contains
    call state_getfldptr(exportState, 'net_heat_flx_to_ocn', fhocn_ptr, rc)
    call state_getfldptr(exportState, 'mean_fresh_water_to_ocean_rate', fresh_ptr, rc)
    
-   n = 0
-   do iblk = 1, nblocks
-      this_block = get_block(blocks_ice(iblk),iblk)
-      ilo = this_block%ilo
-      ihi = this_block%ihi
-      jlo = this_block%jlo
-      jhi = this_block%jhi
-      do j = jlo, jhi
-         do i = ilo, ihi
-            n = n + 1
+   ! n = 0
+   ! do iblk = 1, nblocks
+   !    this_block = get_block(blocks_ice(iblk),iblk)
+   !    ilo = this_block%ilo
+   !    ihi = this_block%ihi
+   !    jlo = this_block%jlo
+   !    jhi = this_block%jhi
+   !    do j = jlo, jhi
+   !       do i = ilo, ihi
+   !          n = n + 1
 
-            if (tmask(i,j,iblk)) then
+   !          if (tmask(i,j,iblk)) then
 
-               if (lice_nth(i,j,iblk) == 0.0) then
-                  lice_nth(i,j,iblk) = um_icenth(n)
-               end if
+   !             if (lice_nth(i,j,iblk) == 0.0) then
+   !                lice_nth(i,j,iblk) = um_icenth(n)
+   !             end if
 
-               if (lice_sth(i,j,iblk) == 0.0) then
-                  lice_sth(i,j,iblk) = um_icesth(n)
-               end if
+   !             if (lice_sth(i,j,iblk) == 0.0) then
+   !                lice_sth(i,j,iblk) = um_icesth(n)
+   !             end if
 
-               if (amsk_nth(i,j,iblk) > 0.0) then
-                  licefw = max(0.0, um_icenth(n) - lice_nth(i,j,iblk)) * msk_nth(i,j,iblk) / amsk_nth(i,j,iblk) 
-               else if (amsk_sth(i,j,iblk) > 0.0) then
-                  licefw = max(0.0, um_icesth(n) - lice_sth(i,j,iblk)) * msk_sth(i,j,iblk) / amsk_sth(i,j,iblk)
-               else
-                  licefw = 0.0
-               end if
+   !             if (amsk_nth(i,j,iblk) > 0.0) then
+   !                licefw = max(0.0, um_icenth(n) - lice_nth(i,j,iblk)) * msk_nth(i,j,iblk) / amsk_nth(i,j,iblk) 
+   !             else if (amsk_sth(i,j,iblk) > 0.0) then
+   !                licefw = max(0.0, um_icesth(n) - lice_sth(i,j,iblk)) * msk_sth(i,j,iblk) / amsk_sth(i,j,iblk)
+   !             else
+   !                licefw = 0.0
+   !             end if
                
-               licefw = licefw / cpl_dt
+   !             licefw = licefw / cpl_dt
 
-               liceht = -licefw * Lfresh
+   !             liceht = -licefw * Lfresh
                
-               ! fresh_ptr(n) = fresh_ptr(n) + licefw
-               ! fhocn_ptr(n) = fhocn_ptr(n) + liceht
+   !             ! fresh_ptr(n) = fresh_ptr(n) + licefw
+   !             ! fhocn_ptr(n) = fhocn_ptr(n) + liceht
 
-               lice_nth(i,j,iblk) = um_icenth(n)
-               lice_sth(i,j,iblk) = um_icesth(n)
+   !             lice_nth(i,j,iblk) = um_icenth(n)
+   !             lice_sth(i,j,iblk) = um_icesth(n)
 
-            end if
+   !          end if
 
-         end do
-      end do
-   end do
+   !       end do
+   !    end do
+   ! end do
 
   end subroutine ice_export_access
 
