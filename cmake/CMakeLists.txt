@@ -4,12 +4,34 @@ cmake_minimum_required(VERSION 3.18)
 #                         Basic project definition                              #
 #]==============================================================================]
 
-project(CICE6 DESCRIPTION "CICE6" LANGUAGES C Fortran)
+project(CICE 
+        DESCRIPTION "CICE Sea Ice Model"
+        HOMEPAGE_URL https://github.com/ciCE-Consortium/cice
+        LANGUAGES C Fortran)
+
+#[==============================================================================[
+#                                   Options                                     #
+#]==============================================================================]
+
+# Build options
+option(ACCESS3_LIB_INSTALL   "Instal ACCESS3 libraries" OFF)
+option(CICE_IO               "CICE IO Method" "Binary")
+option(CESMCOUPLED           "CESMCOUPLED Build CPP" OFF)
+# openmp ?
+
+message(STATUS "Build options")
+message(STATUS "  - ACCESS3_LIB_INSTALL   ${ACCESS3_LIB_INSTALL}")
+message(STATUS "  - CICE_IO   ${CICE_IO}")
+message(STATUS "  - CESMCOUPLED   ${CESMCOUPLED}")
+
+#[==============================================================================[
+#                           Project configuration                               #
+#]==============================================================================]
 
 list(APPEND CMAKE_MODULE_PATH ${CMAKE_SOURCE_DIR})
+include(CMakePackageConfigHelpers)
 include(GNUInstallDirs)
 include(FortranLib)
-
 
 # Common compiler flags and definitions
 if(CMAKE_Fortran_COMPILER_ID MATCHES "GNU")
@@ -51,22 +73,36 @@ set(CMAKE_INSTALL_MODULEDIR ${CMAKE_INSTALL_INCLUDEDIR}
   "Fortran module installation path (Not a cmake native variable)"
 )
 
+#[==============================================================================[
+#                              External packages                                #
+#]==============================================================================]
+
 if(ACCESS3_LIB_INSTALL)
-  find_package(Access3Share)
-  find_package(FoX 4.1.2 REQUIRED)
+  find_package(Access3Share) #should this have a REQUIRED?
+  find_package(ESMF 8.3.0 MODULE REQUIRED)
+else()
+  find_package(MPI REQUIRED)
 endif()
+
 if(CICE_IO MATCHES "^(NetCDF|PIO)$")
   find_package(NetCDF 4.7.3 REQUIRED Fortran)
 endif()
 if(CICE_IO MATCHES "PIO")
   find_package(PIO 2.5.3 REQUIRED COMPONENTS C Fortran)
 endif()
+
+#[==============================================================================[
+#                             Main definitions                                  #
+#]==============================================================================]
+
 ### Targets
 
 ## CICE library
 add_fortran_library(cicelib mod STATIC)
-target_compile_definitions(cicelib PRIVATE FORTRANUNDERSCORE ncdf)
+
 if(CICE_IO MATCHES "^(NetCDF|PIO)$")
+  # which is this not just an "add_compile_definitions?"
+  target_compile_definitions(cicelib PRIVATE FORTRANUNDERSCORE ncdf)
   target_compile_definitions(cicelib PRIVATE USE_NETCDF)
 endif()
 if(ACCESS3_LIB_INSTALL)
@@ -81,6 +117,7 @@ if(CICE_IO MATCHES "^(NetCDF|PIO)$")
     target_link_libraries(cicelib PRIVATE PIO::PIO_Fortran)
   endif()
 endif()
+
 if(OpenMP_Fortran_FOUND)
   target_link_libraries(cicelib PRIVATE OpenMP::OpenMP_Fortran)
 endif()
@@ -205,6 +242,13 @@ if(ACCESS3_LIB_INSTALL)
     ${CICE_CORE}/drivers/nuopc/cmeps/ice_scam.F90
     ${CICE_CORE}/drivers/nuopc/cmeps/ice_shr_methods.F90
   )
+else()
+  target_sources(cicelib PRIVATE
+    # CICE standalone
+    ${CICE_CORE}/drivers/standalone/cice/CICE_FinalMod.F90
+    ${CICE_CORE}/drivers/standalone/cice/CICE_InitMod.F90
+    ${CICE_CORE}/drivers/standalone/cice/CICE_RunMod.F90
+  )
 endif()
 
 # Select IO source files based on CICE_IO
@@ -226,31 +270,58 @@ elseif(CICE_IO MATCHES "Binary")
   )
 endif()
 
-### Install and Export
+#[==============================================================================[
+#                             Install or Export                                 #
+#]==============================================================================]
 
-## Library
 if(ACCESS3_LIB_INSTALL)
+  ## Library
   set_target_properties(cicelib PROPERTIES
-    OUTPUT_NAME access-cice
-    EXPORT_NAME cice
+    OUTPUT_NAME access-cice-cmeps
+    EXPORT_NAME cice-cmeps
   )
   install(TARGETS cicelib
-    EXPORT Access3cice_Targets
-    LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR} COMPONENT Access3_RunTime NAMELINK_COMPONENT Access3_Development
-    ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR} COMPONENT Access3_Development
+    EXPORT AccessCiceCmepsTargets
+    LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR} 
+    ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR} 
   )
   # Fortran module files are a special case, as currently there is no standard
   # way of handling them in CMake
   target_include_directories(cicelib PUBLIC "$<INSTALL_INTERFACE:${CMAKE_INSTALL_MODULEDIR}/access-cice>")
   get_target_property(cice_moddir cicelib Fortran_MODULE_DIRECTORY)
   install(FILES ${cice_moddir}/ice_comp_nuopc.mod
-    DESTINATION ${CMAKE_INSTALL_MODULEDIR}/CICE
-    COMPONENT Access3_Development
-  )
-  install(EXPORT Access3cice_Targets
-    FILE Access3ciceTargets.cmake
-    NAMESPACE Access3::
-    DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/CICE
+    DESTINATION ${CMAKE_INSTALL_MODULEDIR}/access-cice
   )
 
+  # Make sure the dependencies get exported too
+  configure_package_config_file(
+    AccessCiceCmeps.cmake.in
+    "${CMAKE_CURRENT_BINARY_DIR}/AccessCiceCmepsConfig.cmake"
+    INSTALL_DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/AccessCiceCmeps
+  )
+  install(FILES ${CMAKE_SOURCE_DIR}/FindNetCDF.cmake ${CMAKE_SOURCE_DIR}/FindPIO.cmake ${CMAKE_CURRENT_BINARY_DIR}/AccessCiceCmepsConfig.cmake
+    DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/AccessCiceCmeps
+    COMPONENT AccessCiceCmeps
+  )
+  # install(EXPORT AccessCiceCmepsTargets
+  #   FILE AccessCiceCmepsTargets.cmake
+  #   NAMESPACE AccessCiceCmeps::
+  #   DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/AccessCiceCmeps
+  # )
+else()
+  set_target_properties(cicelib PROPERTIES
+      OUTPUT_NAME cicelib-standalone
+      EXPORT_NAME cicelib
+  )
+  add_executable(CICE ${CICE_CORE}/drivers/standalone/cice/CICE.F90)
+  target_link_libraries(CICE PRIVATE cicelib)
+
+  set_target_properties(CICE PROPERTIES
+    LINKER_LANGUAGE Fortran
+    OUTPUT_NAME cice
+  )
+
+  install(TARGETS CICE
+    RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
+  )
 endif()

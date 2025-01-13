@@ -1,0 +1,9 @@
+@PACKAGE_INIT@
+
+
+find_package(NetCDF 4.7.3 REQUIRED Fortran)
+find_package(PIO 2.5.3 REQUIRED COMPONENTS C Fortran)
+
+include("${CMAKE_CURRENT_LIST_DIR}/AccessCiceCmepsTargets.cmake")
+
+check_required_components(AccessCiceCmeps)
