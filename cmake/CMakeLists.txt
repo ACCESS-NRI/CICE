@@ -78,7 +78,7 @@ set(CMAKE_INSTALL_MODULEDIR ${CMAKE_INSTALL_INCLUDEDIR}
 #]==============================================================================]
 
 if(ACCESS3_LIB_INSTALL)
-  find_package(Access3Share) #should this have a REQUIRED?
+  find_package(Access3Share REQUIRED cdeps timing share nuopc_cap_share) 
   find_package(ESMF 8.3.0 MODULE REQUIRED)
 else()
   find_package(MPI REQUIRED)
@@ -299,15 +299,17 @@ if(ACCESS3_LIB_INSTALL)
     "${CMAKE_CURRENT_BINARY_DIR}/AccessCiceCmepsConfig.cmake"
     INSTALL_DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/AccessCiceCmeps
   )
-  install(FILES ${CMAKE_SOURCE_DIR}/FindNetCDF.cmake ${CMAKE_SOURCE_DIR}/FindPIO.cmake ${CMAKE_CURRENT_BINARY_DIR}/AccessCiceCmepsConfig.cmake
+  
+  install(EXPORT AccessCiceCmepsTargets
+    FILE AccessCiceCmepsTargets.cmake
+    NAMESPACE AccessCiceCmeps::
     DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/AccessCiceCmeps
-    COMPONENT AccessCiceCmeps
   )
-  # install(EXPORT AccessCiceCmepsTargets
-  #   FILE AccessCiceCmepsTargets.cmake
-  #   NAMESPACE AccessCiceCmeps::
-  #   DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/AccessCiceCmeps
-  # )
+  install(FILES ${CMAKE_SOURCE_DIR}/FindNetCDF.cmake ${CMAKE_SOURCE_DIR}/FindPIO.cmake ${CMAKE_CURRENT_BINARY_DIR}/AccessCiceCmepsConfig.cmake
+  DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/AccessCiceCmeps
+  COMPONENT AccessCiceCmeps
+  )
+
 else()
   set_target_properties(cicelib PROPERTIES
       OUTPUT_NAME cicelib-standalone
