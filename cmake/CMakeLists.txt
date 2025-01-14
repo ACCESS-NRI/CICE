@@ -112,14 +112,14 @@ if(ACCESS3_LIB_INSTALL)
   )
 endif()
 if(CICE_IO MATCHES "^(NetCDF|PIO)$")
-  target_link_libraries(cicelib PRIVATE NetCDF::NetCDF_Fortran)
+  target_link_libraries(cicelib PUBLIC NetCDF::NetCDF_Fortran)
   if(CICE_IO MATCHES "PIO")
-    target_link_libraries(cicelib PRIVATE PIO::PIO_Fortran)
+    target_link_libraries(cicelib PUBLIC PIO::PIO_Fortran)
   endif()
 endif()
 
 if(OpenMP_Fortran_FOUND)
-  target_link_libraries(cicelib PRIVATE OpenMP::OpenMP_Fortran)
+  target_link_libraries(cicelib PUBLIC OpenMP::OpenMP_Fortran)
 endif()
 
 set(CICE_CORE "${CMAKE_SOURCE_DIR}/../cicecore")
@@ -277,37 +277,38 @@ endif()
 if(ACCESS3_LIB_INSTALL)
   ## Library
   set_target_properties(cicelib PROPERTIES
-    OUTPUT_NAME access-cice-cmeps
-    EXPORT_NAME cice-cmeps
+    OUTPUT_NAME access-cicelib
+    EXPORT_NAME cicelib
   )
   install(TARGETS cicelib
-    EXPORT AccessCiceCmepsTargets
-    LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR} 
+    EXPORT CicelibTargets
+    LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR} COMPONENT AccessCiceCmeps
     ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR} 
   )
   # Fortran module files are a special case, as currently there is no standard
   # way of handling them in CMake
-  target_include_directories(cicelib PUBLIC "$<INSTALL_INTERFACE:${CMAKE_INSTALL_MODULEDIR}/access-cice>")
+  target_include_directories(cicelib PUBLIC "$<INSTALL_INTERFACE:${CMAKE_INSTALL_MODULEDIR}/cicelib>")
   get_target_property(cice_moddir cicelib Fortran_MODULE_DIRECTORY)
   install(FILES ${cice_moddir}/ice_comp_nuopc.mod
-    DESTINATION ${CMAKE_INSTALL_MODULEDIR}/access-cice
+    DESTINATION ${CMAKE_INSTALL_MODULEDIR}/cicelib
+    COMPONENT AccessCiceCmeps
+  )
+  install(EXPORT CicelibTargets
+    FILE CicelibTargets.cmake
+    NAMESPACE Cicelib::
+    DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/Cicelib
   )
 
   # Make sure the dependencies get exported too
   configure_package_config_file(
-    AccessCiceCmeps.cmake.in
-    "${CMAKE_CURRENT_BINARY_DIR}/AccessCiceCmepsConfig.cmake"
-    INSTALL_DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/AccessCiceCmeps
+    CicelibConfig.cmake.in
+    "${CMAKE_CURRENT_BINARY_DIR}/CicelibConfig.cmake"
+    INSTALL_DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/Cicelib
   )
-  
-  install(EXPORT AccessCiceCmepsTargets
-    FILE AccessCiceCmepsTargets.cmake
-    NAMESPACE AccessCiceCmeps::
-    DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/AccessCiceCmeps
-  )
-  install(FILES ${CMAKE_SOURCE_DIR}/FindNetCDF.cmake ${CMAKE_SOURCE_DIR}/FindPIO.cmake ${CMAKE_CURRENT_BINARY_DIR}/AccessCiceCmepsConfig.cmake
-  DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/AccessCiceCmeps
-  COMPONENT AccessCiceCmeps
+    
+  install(FILES ${CMAKE_CURRENT_BINARY_DIR}/CicelibConfig.cmake ${CMAKE_SOURCE_DIR}/FindNetCDF.cmake ${CMAKE_SOURCE_DIR}/FindPIO.cmake 
+    DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/Cicelib
+    COMPONENT AccessCiceCmeps 
   )
 
 else()
@@ -322,8 +323,8 @@ else()
     LINKER_LANGUAGE Fortran
     OUTPUT_NAME cice
   )
-
   install(TARGETS CICE
     RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
+    COMPONENT IO_${CICE_IO}
   )
 endif()
