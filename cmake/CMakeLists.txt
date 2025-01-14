@@ -112,9 +112,9 @@ if(ACCESS3_LIB_INSTALL)
   )
 endif()
 if(CICE_IO MATCHES "^(NetCDF|PIO)$")
-  target_link_libraries(cicelib PUBLIC NetCDF::NetCDF_Fortran)
+  target_link_libraries(cicelib PRIVATE NetCDF::NetCDF_Fortran)
   if(CICE_IO MATCHES "PIO")
-    target_link_libraries(cicelib PUBLIC PIO::PIO_Fortran)
+    target_link_libraries(cicelib PRIVATE PIO::PIO_Fortran)
   endif()
 endif()
 
@@ -306,10 +306,22 @@ if(ACCESS3_LIB_INSTALL)
     INSTALL_DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/Cicelib
   )
     
-  install(FILES ${CMAKE_CURRENT_BINARY_DIR}/CicelibConfig.cmake ${CMAKE_SOURCE_DIR}/FindNetCDF.cmake ${CMAKE_SOURCE_DIR}/FindPIO.cmake 
+  install(FILES ${CMAKE_CURRENT_BINARY_DIR}/CicelibConfig.cmake
     DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/Cicelib
     COMPONENT AccessCiceCmeps 
   )
+
+  if(CICE_IO MATCHES "NetCDF")
+    install(FILES ${CMAKE_SOURCE_DIR}/FindNetCDF.cmake
+      DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/Cicelib
+      COMPONENT IO_NetCDF
+    )
+  elseif(CICE_IO MATCHES "PIO")
+    install(FILES ${CMAKE_SOURCE_DIR}/FindNetCDF.cmake ${CMAKE_SOURCE_DIR}/FindPIO.cmake 
+      DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/Cicelib
+      COMPONENT IO_PIO 
+    )
+  endif()
 
 else()
   set_target_properties(cicelib PROPERTIES
