@@ -13,16 +13,24 @@ project(CICE
 #                                   Options                                     #
 #]==============================================================================]
 
-# Build options
-option(ACCESS3_LIB_INSTALL   "Instal ACCESS3 libraries" OFF)
-option(CICE_IO               "CICE IO Method" "Binary")
-option(CESMCOUPLED           "CESMCOUPLED Build CPP" OFF)
-# openmp ?
-
 message(STATUS "Build options")
-message(STATUS "  - ACCESS3_LIB_INSTALL   ${ACCESS3_LIB_INSTALL}")
-message(STATUS "  - CICE_IO   ${CICE_IO}")
-message(STATUS "  - CESMCOUPLED   ${CESMCOUPLED}")
+
+option(CICE_IO               "CICE IO Method" "Binary")
+if(NOT CICE_IO MATCHES "^(NetCDF|PIO|Binary)$")
+  message(FATAL_ERROR " CICE_IO   ${CICE_IO} not valid, choose NetCDF|PIO|Binary")
+else()
+  message(STATUS "  - CICE_IO   ${CICE_IO}")
+endif()
+
+option(ACCESS3_CICE          "Use ACCESS3 dependencies and install ACCESS3 libraries" OFF)
+message(STATUS "  - ACCESS3_CICE   ${ACCESS3_CICE}")
+
+if (ACCESS3_CICE)
+  option(CESMCOUPLED           "CESMCOUPLED Build CPP" OFF)
+  message(STATUS "  - CESMCOUPLED   ${CESMCOUPLED}")
+endif()
+
+# openmp ?
 
 #[==============================================================================[
 #                           Project configuration                               #
@@ -77,7 +85,7 @@ set(CMAKE_INSTALL_MODULEDIR ${CMAKE_INSTALL_INCLUDEDIR}
 #                              External packages                                #
 #]==============================================================================]
 
-if(ACCESS3_LIB_INSTALL)
+if(ACCESS3_CICE)
   find_package(Access3Share REQUIRED cdeps timing share nuopc_cap_share) 
   find_package(ESMF 8.3.0 MODULE REQUIRED)
 else()
@@ -105,10 +113,10 @@ if(CICE_IO MATCHES "^(NetCDF|PIO)$")
   target_compile_definitions(cicelib PRIVATE FORTRANUNDERSCORE ncdf)
   target_compile_definitions(cicelib PRIVATE USE_NETCDF)
 endif()
-if(ACCESS3_LIB_INSTALL)
+if(ACCESS3_CICE)
   target_link_libraries(cicelib
     PUBLIC esmf
-    PRIVATE Access3Share::nuopc_cap_share Access3Share::share Access3Share::timing Access3Share::cdeps-common
+    PRIVATE Access3::nuopc_cap_share Access3::share Access3::timing Access3::cdeps-common
   )
 endif()
 if(CICE_IO MATCHES "^(NetCDF|PIO)$")
@@ -228,7 +236,7 @@ target_sources(cicelib PRIVATE
   ${CICE_CORE}/cicedyn/infrastructure/comm/mpi/ice_timers.F90
 )
 
-if(ACCESS3_LIB_INSTALL)
+if(ACCESS3_CICE)
   target_sources(cicelib PRIVATE
     # NUOPC CMEPS driver
     ${CICE_CORE}/drivers/nuopc/cmeps/CICE_FinalMod.F90
@@ -274,7 +282,7 @@ endif()
 #                             Install or Export                                 #
 #]==============================================================================]
 
-if(ACCESS3_LIB_INSTALL)
+if(ACCESS3_CICE)
   ## Library
   set_target_properties(cicelib PROPERTIES
     OUTPUT_NAME access-cicelib
@@ -295,7 +303,7 @@ if(ACCESS3_LIB_INSTALL)
   )
   install(EXPORT CicelibTargets
     FILE CicelibTargets.cmake
-    NAMESPACE Cicelib::
+    NAMESPACE Access3::
     DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/Cicelib
   )
 
