@@ -31,7 +31,7 @@ module ice_comp_nuopc
   use ice_fileunits      , only : nu_diag, nu_diag_set, inst_index, inst_name
   use ice_fileunits      , only : inst_suffix, release_all_fileunits, flush_fileunit
   use ice_restart_shared , only : runid, runtype, restart, use_restart_time, restart_dir, restart_file, &
-                                  restart_format, restart_chunksize , pointer_date
+                                  restart_format, restart_chunksize, pointer_date
   use ice_history        , only : accum_hist
   use ice_history_shared , only : history_format, history_chunksize
   use ice_exit           , only : abort_ice
