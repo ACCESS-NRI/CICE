@@ -11,7 +11,6 @@
       use ice_kinds_mod
       use ice_fileunits, only: nu_diag, ice_stderr, flush_fileunit
       use icepack_intfc, only: icepack_warnings_flush, icepack_warnings_aborted
-      use ESMF
 #if (defined CESMCOUPLED)
       use shr_sys_mod
 #else
@@ -46,7 +45,6 @@
          error_code    ! return code
       logical (log_kind) :: ldoabort   ! local doabort flag
       character(len=*), parameter :: subname='(abort_ice)'
-      character(len=300) :: msgString
 
       ldoabort = .true.
       if (present(doabort)) ldoabort = doabort
@@ -56,14 +54,6 @@
 #else
       outunit = ice_stderr
 #endif
-
-      write(msgString,*) subname, 'ABORTED: '
-      if (present(file))   write (msgString,*) subname,' called from ',trim(file)
-      call ESMF_LogWrite(msgString, ESMF_LOGMSG_ERROR)
-      if (present(line))   write (msgString,*) subname,' line number ',line
-      call ESMF_LogWrite(msgString, ESMF_LOGMSG_ERROR)
-      if (present(error_message)) write (msgString,*) subname,' error = ',trim(error_message)
-      call ESMF_LogWrite(msgString, ESMF_LOGMSG_ERROR)
 
       call flush_fileunit(nu_diag)
       call icepack_warnings_flush(nu_diag)
