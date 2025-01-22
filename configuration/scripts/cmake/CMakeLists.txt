@@ -130,8 +130,8 @@ if(OpenMP_Fortran_FOUND)
   target_link_libraries(cicelib PUBLIC OpenMP::OpenMP_Fortran)
 endif()
 
-set(CICE_CORE "${CMAKE_SOURCE_DIR}/../cicecore")
-set(ICEPACK "${CMAKE_SOURCE_DIR}/../icepack")
+set(CICE_CORE "${CMAKE_SOURCE_DIR}/../../../cicecore")
+set(ICEPACK "${CMAKE_SOURCE_DIR}/../../../icepack")
 
 target_sources(cicelib PRIVATE
   # Shared List:
