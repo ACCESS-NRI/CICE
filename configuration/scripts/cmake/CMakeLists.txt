@@ -290,8 +290,8 @@ if(ACCESS3_CICE)
   )
   install(TARGETS cicelib
     EXPORT CicelibTargets
-    LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR} COMPONENT AccessCiceCmeps_runtime NAMELINK_COMPONENT AccessCiceCmeps_Development
-    ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR} AccessCiceCmeps_Development
+    LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR} COMPONENT AccessCICECmeps_runtime NAMELINK_COMPONENT AccessCICECmeps_Development
+    ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR} COMPONENT AccessCICECmeps_Development
   )
   # Fortran module files are a special case, as currently there is no standard
   # way of handling them in CMake
@@ -299,7 +299,7 @@ if(ACCESS3_CICE)
   get_target_property(cice_moddir cicelib Fortran_MODULE_DIRECTORY)
   install(FILES ${cice_moddir}/ice_comp_nuopc.mod
     DESTINATION ${CMAKE_INSTALL_MODULEDIR}/cicelib
-    COMPONENT AccessCiceCmeps
+    COMPONENT AccessCICECmeps_Development
   )
   install(EXPORT CicelibTargets
     FILE CicelibTargets.cmake
@@ -316,7 +316,7 @@ if(ACCESS3_CICE)
     
   install(FILES ${CMAKE_CURRENT_BINARY_DIR}/CicelibConfig.cmake
     DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/Cicelib
-    COMPONENT AccessCiceCmeps_Development 
+    COMPONENT AccessCICECmeps_Development 
   )
 
   if(CICE_IO MATCHES "NetCDF")
