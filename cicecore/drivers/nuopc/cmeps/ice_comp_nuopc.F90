@@ -325,16 +325,14 @@ contains
     endif
 
 #ifdef CESMCOUPLED
-    ! set CICE internal pointer_date variable based on nuopc settings
-    ! this appends a datestamp to the "rpointer" file (by default this is on)
     pointer_date = .true.
-    call NUOPC_CompAttributeGet(gcomp, name="restart_pointer_append_date", value=cvalue, isPresent=isPresent, isSet=isSet, rc=rc)
-    if (ChkErr(rc,__LINE__,u_FILE_u)) return
-    if (isPresent .and. isSet) then
-       if (trim(cvalue) .eq. '.false.') pointer_date = .false.
-    endif
 #endif
 
+    ! set CICE internal pointer_date variable based on nuopc settings
+    ! this appends a datestamp to the "rpointer" file
+    call NUOPC_CompAttributeGet(gcomp, name="restart_pointer_append_date", value=cvalue, isPresent=isPresent, isSet=isSet, rc=rc)
+    if (ChkErr(rc,__LINE__,u_FILE_u)) return
+    if (isPresent .and. isSet) pointer_date = (trim(cvalue) .eq. ".true.")
     !----------------------------------------------------------------------------
     ! generate local mpi comm
     !----------------------------------------------------------------------------
