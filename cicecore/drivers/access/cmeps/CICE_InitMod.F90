@@ -50,6 +50,8 @@ contains
          file=__FILE__,line= __LINE__)
 
     call input_data           ! namelist variables
+    call access_verify_inputs
+
     call input_zbgc           ! vertical biogeochemistry namelist
     call count_tracers        ! count tracers
 
@@ -463,6 +465,28 @@ contains
          file=__FILE__, line=__LINE__)
   end subroutine init_restart
 
+  !=======================================================================
+
+  subroutine access_verify_inputs()
+    ! Check required namelist settings for ACCESS CM3
+    logical(kind=log_kind) :: &
+        tr_pond_lvl
+    character(len=*), parameter :: subname = '(access_verify_inputs)'
+
+
+    call icepack_query_tracer_flags(tr_pond_lvl_out=tr_pond_lvl)
+    call icepack_warnings_flush(nu_diag)
+    if (icepack_warnings_aborted()) call abort_ice(trim(subname), &
+         file=__FILE__,line= __LINE__)
+
+    if (tr_pond_lvl) then
+        write(nu_diag,*) subname//' ERROR: Wrong meltpond scheme selected'
+        write(nu_diag,*) subname//' ERROR: tr_pond_lvl = ', tr_pond_lvl
+        call abort_ice (error_message=subname//' Level pond scheme not supported in ACCESS CM3 coupling', &
+        file=__FILE__, line=__LINE__)
+    end if
+
+  end subroutine access_verify_inputs
   !=======================================================================
 
 end module CICE_InitMod
