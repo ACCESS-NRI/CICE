@@ -15,7 +15,10 @@ project(CICE
 
 message(STATUS "Build options")
 
-option(CICE_IO               "CICE IO Method" "Binary")
+option(CICE_IO "CICE IO Method" OFF)
+if (NOT CICE_IO)
+  set(CICE_IO "Binary") #set a default
+endif()
 if(NOT CICE_IO MATCHES "^(NetCDF|PIO|Binary)$")
   message(FATAL_ERROR " CICE_IO   ${CICE_IO} not valid, choose NetCDF|PIO|Binary")
 else()
@@ -25,7 +28,18 @@ endif()
 option(ACCESS3_CICE          "Use ACCESS3 dependencies and install ACCESS3 libraries" OFF)
 message(STATUS "  - ACCESS3_CICE   ${ACCESS3_CICE}")
 
-if (ACCESS3_CICE)
+#placeholder CICE_DRIVER option to allow for a nuopc/access driver in the future
+option(CICE_DRIVER           "CICE driver code to use" OFF)
+if(NOT CICE_DRIVER)
+  if(ACCESS3_CICE)
+    set(CICE_DRIVER "nuopc/cmeps")
+  else()
+    set(CICE_DRIVER "standalone/cice")
+  endif()
+endif()
+message(STATUS "  - CICE_DRIVER   ${CICE_DRIVER}")
+
+if(ACCESS3_CICE)
   option(CESMCOUPLED           "CESMCOUPLED Build CPP" OFF)
   message(STATUS "  - CESMCOUPLED   ${CESMCOUPLED}")
 endif()
@@ -95,7 +109,7 @@ endif()
 if(CICE_IO MATCHES "^(NetCDF|PIO)$")
   find_package(NetCDF 4.7.3 REQUIRED Fortran)
 endif()
-if(CICE_IO MATCHES "PIO")
+if(CICE_IO MATCHES "PIO" AND NOT TARGET PIO::PIO_Fortran)
   find_package(PIO 2.5.3 REQUIRED COMPONENTS C Fortran)
 endif()
 
@@ -236,27 +250,29 @@ target_sources(cicelib PRIVATE
   ${CICE_CORE}/cicedyn/infrastructure/comm/mpi/ice_timers.F90
 )
 
-if(ACCESS3_CICE)
+if(CICE_DRIVER MATCHES "nuopc/cmeps")
   target_sources(cicelib PRIVATE
     # NUOPC CMEPS driver
-    ${CICE_CORE}/drivers/nuopc/cmeps/CICE_FinalMod.F90
-    ${CICE_CORE}/drivers/nuopc/cmeps/CICE_InitMod.F90
-    ${CICE_CORE}/drivers/nuopc/cmeps/CICE_RunMod.F90
-    ${CICE_CORE}/drivers/nuopc/cmeps/cice_wrapper_mod.F90
-    ${CICE_CORE}/drivers/nuopc/cmeps/ice_comp_nuopc.F90
-    ${CICE_CORE}/drivers/nuopc/cmeps/ice_import_export.F90
-    ${CICE_CORE}/drivers/nuopc/cmeps/ice_mesh_mod.F90
-    ${CICE_CORE}/drivers/nuopc/cmeps/ice_prescribed_mod.F90
-    ${CICE_CORE}/drivers/nuopc/cmeps/ice_scam.F90
-    ${CICE_CORE}/drivers/nuopc/cmeps/ice_shr_methods.F90
+    ${CICE_CORE}/drivers/${CICE_DRIVER}/CICE_FinalMod.F90
+    ${CICE_CORE}/drivers/${CICE_DRIVER}/CICE_InitMod.F90
+    ${CICE_CORE}/drivers/${CICE_DRIVER}/CICE_RunMod.F90
+    ${CICE_CORE}/drivers/${CICE_DRIVER}/cice_wrapper_mod.F90
+    ${CICE_CORE}/drivers/${CICE_DRIVER}/ice_comp_nuopc.F90
+    ${CICE_CORE}/drivers/${CICE_DRIVER}/ice_import_export.F90
+    ${CICE_CORE}/drivers/${CICE_DRIVER}/ice_mesh_mod.F90
+    ${CICE_CORE}/drivers/${CICE_DRIVER}/ice_prescribed_mod.F90
+    ${CICE_CORE}/drivers/${CICE_DRIVER}/ice_scam.F90
+    ${CICE_CORE}/drivers/${CICE_DRIVER}/ice_shr_methods.F90
   )
-else()
+elseif(CICE_DRIVER MATCHES "standalone/cice")
   target_sources(cicelib PRIVATE
     # CICE standalone
-    ${CICE_CORE}/drivers/standalone/cice/CICE_FinalMod.F90
-    ${CICE_CORE}/drivers/standalone/cice/CICE_InitMod.F90
-    ${CICE_CORE}/drivers/standalone/cice/CICE_RunMod.F90
+    ${CICE_CORE}/drivers/${CICE_DRIVER}/CICE_FinalMod.F90
+    ${CICE_CORE}/drivers/${CICE_DRIVER}/CICE_InitMod.F90
+    ${CICE_CORE}/drivers/${CICE_DRIVER}/CICE_RunMod.F90
   )
+else()
+  message(FATAL_ERROR "CICE_DRIVER: ${CICE_DRIVER} not supported, add to cmake")
 endif()
 
 # Select IO source files based on CICE_IO
