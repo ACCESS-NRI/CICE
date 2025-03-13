@@ -16,8 +16,6 @@ elseif(CICE_IO MATCHES "PIO")
     find_dependency(NetCDF REQUIRED Fortran)
 endif()
 
-# Request components
-set(_required_components ${Cicelib_FIND_COMPONENTS})
 
 # Run the normal Targets.cmake
 list(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_LIST_DIR})
