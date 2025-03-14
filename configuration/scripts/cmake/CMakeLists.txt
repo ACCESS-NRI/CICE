@@ -25,8 +25,10 @@ else()
   message(STATUS "  - CICE_IO   ${CICE_IO}")
 endif()
 
-option(ACCESS3_CICE          "Use ACCESS3 dependencies and install ACCESS3 libraries" OFF)
+option(ACCESS3_CICE    "Use ACCESS3 dependencies and install ACCESS3 libraries" OFF)
+option(OPENMP          "Enable OpenMP threading" OFF)
 message(STATUS "  - ACCESS3_CICE   ${ACCESS3_CICE}")
+message(STATUS "  - OPENMP         ${OPENMP}")
 
 #placeholder CICE_DRIVER option to allow for a nuopc/access driver in the future
 option(CICE_DRIVER           "CICE driver code to use" OFF)
@@ -43,8 +45,6 @@ if(ACCESS3_CICE)
   option(CESMCOUPLED           "CESMCOUPLED Build CPP" OFF)
   message(STATUS "  - CESMCOUPLED   ${CESMCOUPLED}")
 endif()
-
-# openmp ?
 
 #[==============================================================================[
 #                           Project configuration                               #
@@ -106,6 +106,10 @@ else()
   find_package(MPI REQUIRED)
 endif()
 
+if(OPENMP)
+  find_package(OpenMP REQUIRED COMPONENTS Fortran)
+endif()
+
 if(CICE_IO MATCHES "^(NetCDF|PIO)$")
   find_package(NetCDF 4.7.3 REQUIRED Fortran)
 endif()
@@ -120,6 +124,10 @@ endif()
 ### Targets
 
 ## CICE library
+
+set(CICE_CORE "${CMAKE_SOURCE_DIR}/../../../cicecore")
+set(ICEPACK "${CMAKE_SOURCE_DIR}/../../../icepack")
+
 add_fortran_library(cicelib mod STATIC)
 
 if(CICE_IO MATCHES "^(NetCDF|PIO)$")
@@ -140,12 +148,11 @@ if(CICE_IO MATCHES "^(NetCDF|PIO)$")
   endif()
 endif()
 
-if(OpenMP_Fortran_FOUND)
+if(OPENMP)
   target_link_libraries(cicelib PUBLIC OpenMP::OpenMP_Fortran)
 endif()
 
-set(CICE_CORE "${CMAKE_SOURCE_DIR}/../../../cicecore")
-set(ICEPACK "${CMAKE_SOURCE_DIR}/../../../icepack")
+
 
 target_sources(cicelib PRIVATE
   # Shared List:
