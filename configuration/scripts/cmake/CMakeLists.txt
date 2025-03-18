@@ -44,6 +44,8 @@ message(STATUS "  - CICE_DRIVER   ${CICE_DRIVER}")
 if(ACCESS3_CICE)
   option(CESMCOUPLED           "CESMCOUPLED Build CPP" OFF)
   message(STATUS "  - CESMCOUPLED   ${CESMCOUPLED}")
+elseif(CESMCOUPLED)
+  message(FATAL_ERROR "CESMCOUPLED not supported when ACCESS3_CICE=OFF")
 endif()
 
 #[==============================================================================[
@@ -360,7 +362,7 @@ else()
       EXPORT_NAME cicelib
   )
   add_executable(CICE ${CICE_CORE}/drivers/standalone/cice/CICE.F90)
-  target_link_libraries(CICE PRIVATE cicelib)
+  target_link_libraries(CICE PRIVATE cicelib MPI::MPI_Fortran)
 
   set_target_properties(CICE PROPERTIES
     LINKER_LANGUAGE Fortran
