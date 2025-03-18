@@ -1,3 +1,5 @@
+# Copyright ACCESS-NRI and contributors. See the top-level COPYRIGHT file for details.
+
 cmake_minimum_required(VERSION 3.18)
 
 #[==============================================================================[
