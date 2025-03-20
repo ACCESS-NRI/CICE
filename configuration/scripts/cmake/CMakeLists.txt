@@ -105,7 +105,9 @@ set(CMAKE_INSTALL_MODULEDIR ${CMAKE_INSTALL_INCLUDEDIR}
 
 if(ACCESS3_CICE)
   find_package(Access3Share REQUIRED cdeps timing share nuopc_cap_share) 
-  find_package(ESMF 8.3.0 MODULE REQUIRED)
+  if(NOT TARGET ESMF::ESMF) #Access3Share probably already has ESMF with PUBLIC interface
+    message(FATAL_ERROR "ESMF interface missing from Access3Share package")  
+  endif()
 else()
   find_package(MPI REQUIRED)
 endif()
@@ -114,11 +116,11 @@ if(OPENMP)
   find_package(OpenMP REQUIRED COMPONENTS Fortran)
 endif()
 
-if(CICE_IO MATCHES "^(NetCDF|PIO)$")
+if(CICE_IO MATCHES "^(NetCDF|PIO)$" AND NOT TARGET NetCDF::NetCDF_Fortran)
   find_package(NetCDF 4.7.3 REQUIRED Fortran)
 endif()
 if(CICE_IO MATCHES "PIO" AND NOT TARGET PIO::PIO_Fortran)
-  find_package(PIO 2.5.3 REQUIRED COMPONENTS C Fortran)
+  find_package(PIO 2.5.3 REQUIRED COMPONENTS Fortran)
 endif()
 
 #[==============================================================================[
@@ -141,7 +143,7 @@ if(CICE_IO MATCHES "^(NetCDF|PIO)$")
 endif()
 if(ACCESS3_CICE)
   target_link_libraries(cicelib
-    PUBLIC esmf
+    PUBLIC ESMF::ESMF
     PRIVATE Access3::nuopc_cap_share Access3::share Access3::timing Access3::cdeps-common
   )
 endif()
