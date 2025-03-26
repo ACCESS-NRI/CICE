@@ -27,15 +27,15 @@ else()
   message(STATUS "  - CICE_IO   ${CICE_IO}")
 endif()
 
-option(ACCESS3_CICE    "Use ACCESS3 dependencies and install ACCESS3 libraries" OFF)
-option(OPENMP          "Enable OpenMP threading" OFF)
-message(STATUS "  - ACCESS3_CICE   ${ACCESS3_CICE}")
-message(STATUS "  - OPENMP         ${OPENMP}")
+option(CICE_ACCESS3    "Use ACCESS3 dependencies and install ACCESS3 libraries" OFF)
+option(CICE_OPENMP      "Enable OpenMP threading"                               OFF)
+message(STATUS "  - CICE_ACCESS3   ${CICE_ACCESS3}")
+message(STATUS "  - CICE_OPENMP    ${CICE_OPENMP}")
 
 #placeholder CICE_DRIVER option to allow for a nuopc/access driver in the future
 option(CICE_DRIVER           "CICE driver code to use" OFF)
 if(NOT CICE_DRIVER)
-  if(ACCESS3_CICE)
+  if(CICE_ACCESS3)
     set(CICE_DRIVER "nuopc/cmeps")
   else()
     set(CICE_DRIVER "standalone/cice")
@@ -43,10 +43,10 @@ if(NOT CICE_DRIVER)
 endif()
 message(STATUS "  - CICE_DRIVER   ${CICE_DRIVER}")
 
-if(ACCESS3_CICE)
-  option(CESMCOUPLED           "CESMCOUPLED Build CPP" OFF)
-  message(STATUS "  - CESMCOUPLED   ${CESMCOUPLED}")
-elseif(CESMCOUPLED)
+if(CICE_ACCESS3)
+  option(CICE_CESMCOUPLED           "CESMCOUPLED Build CPP" OFF)
+  message(STATUS "  - CICE_CESMCOUPLED   ${CICE_CESMCOUPLED}")
+elseif(CICE_CESMCOUPLED)
   message(FATAL_ERROR "CESMCOUPLED not supported when ACCESS3_CICE=OFF")
 endif()
 
@@ -87,7 +87,7 @@ else()
   message(WARNING "C compiler with ID ${CMAKE_C_COMPILER_ID} will be used with CMake default options")
 endif()
 
-if (CESMCOUPLED)
+if (CICE_CESMCOUPLED)
   add_compile_definitions(
     CESMCOUPLED
   )
@@ -103,7 +103,7 @@ set(CMAKE_INSTALL_MODULEDIR ${CMAKE_INSTALL_INCLUDEDIR}
 #                              External packages                                #
 #]==============================================================================]
 
-if(ACCESS3_CICE)
+if(CICE_ACCESS3)
   find_package(Access3Share REQUIRED cdeps timing share nuopc_cap_share) 
   if(NOT TARGET ESMF::ESMF) #Access3Share probably already has ESMF with PUBLIC interface
     message(FATAL_ERROR "ESMF interface missing from Access3Share package")  
@@ -112,7 +112,7 @@ else()
   find_package(MPI REQUIRED)
 endif()
 
-if(OPENMP)
+if(CICE_OPENMP)
   find_package(OpenMP REQUIRED COMPONENTS Fortran)
 endif()
 
@@ -141,7 +141,7 @@ if(CICE_IO MATCHES "^(NetCDF|PIO)$")
   target_compile_definitions(cicelib PRIVATE FORTRANUNDERSCORE ncdf)
   target_compile_definitions(cicelib PRIVATE USE_NETCDF)
 endif()
-if(ACCESS3_CICE)
+if(CICE_ACCESS3)
   target_link_libraries(cicelib
     PUBLIC ESMF::ESMF
     PRIVATE Access3::nuopc_cap_share Access3::share Access3::timing Access3::cdeps-common
@@ -154,7 +154,7 @@ if(CICE_IO MATCHES "^(NetCDF|PIO)$")
   endif()
 endif()
 
-if(OPENMP)
+if(CICE_OPENMP)
   target_link_libraries(cicelib PUBLIC OpenMP::OpenMP_Fortran)
 endif()
 
@@ -311,7 +311,7 @@ endif()
 #                             Install or Export                                 #
 #]==============================================================================]
 
-if(ACCESS3_CICE)
+if(CICE_ACCESS3)
   ## Library
   set_target_properties(cicelib PROPERTIES
     OUTPUT_NAME access-cicelib
@@ -319,8 +319,8 @@ if(ACCESS3_CICE)
   )
   install(TARGETS cicelib
     EXPORT CicelibTargets
-    LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR} COMPONENT AccessCICECmeps_runtime NAMELINK_COMPONENT AccessCICECmeps_Development
-    ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR} COMPONENT AccessCICECmeps_Development
+    LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR} COMPONENT AccessCICE_runtime NAMELINK_COMPONENT AccessCICE_Development
+    ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR} COMPONENT AccessCICE_Development
   )
   # Fortran module files are a special case, as currently there is no standard
   # way of handling them in CMake
@@ -342,10 +342,10 @@ if(ACCESS3_CICE)
     "${CMAKE_CURRENT_BINARY_DIR}/CicelibConfig.cmake"
     INSTALL_DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/Cicelib
   )
-    
+
   install(FILES ${CMAKE_CURRENT_BINARY_DIR}/CicelibConfig.cmake
     DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/Cicelib
-    COMPONENT AccessCICECmeps_Development 
+    COMPONENT AccessCICE_Development 
   )
 
   if(CICE_IO MATCHES "NetCDF")
