@@ -287,7 +287,7 @@ elseif(CICE_DRIVER MATCHES "standalone/cice")
     ${CICE_CORE}/drivers/${CICE_DRIVER}/CICE_RunMod.F90
   )
 else()
-  message(FATAL_ERROR "CICE_DRIVER: ${CICE_DRIVER} not supported, add to cmake")
+  message(FATAL_ERROR "CICE_DRIVER: ${CICE_DRIVER} is currently not supported by the CMake build system")
 endif()
 
 # Select IO source files based on CICE_IO
