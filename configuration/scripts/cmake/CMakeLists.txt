@@ -43,13 +43,6 @@ if(NOT CICE_DRIVER)
 endif()
 message(STATUS "  - CICE_DRIVER   ${CICE_DRIVER}")
 
-if(CICE_ACCESS3)
-  option(CICE_CESMCOUPLED           "CESMCOUPLED Build CPP" OFF)
-  message(STATUS "  - CICE_CESMCOUPLED   ${CICE_CESMCOUPLED}")
-elseif(CICE_CESMCOUPLED)
-  message(FATAL_ERROR "CESMCOUPLED not supported when ACCESS3_CICE=OFF")
-endif()
-
 #[==============================================================================[
 #                           Project configuration                               #
 #]==============================================================================]
@@ -87,7 +80,7 @@ else()
   message(WARNING "C compiler with ID ${CMAKE_C_COMPILER_ID} will be used with CMake default options")
 endif()
 
-if (CICE_CESMCOUPLED)
+if (CICE_ACCESS3)
   add_compile_definitions(
     CESMCOUPLED
   )
