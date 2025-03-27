@@ -1912,8 +1912,8 @@
          select case (trim(ns_boundary_type))
             case('tripole')
                do i = 1, nx_global+1
-                  G_T(i,ny_global+1) = G_T(nx_global+1-i, ny_global)
-                  G_E(i,ny_global+1) = G_E(nx_global+1-i, ny_global)
+                  G_T(i,ny_global+1) = G_T(nx_global+2-i, ny_global)
+                  G_E(i,ny_global+1) = G_E(nx_global+2-i, ny_global)
                enddo
             case('cyclic')
                G_T(:,ny_global+1) = G_T(:,1)
