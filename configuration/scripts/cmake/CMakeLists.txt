@@ -117,6 +117,7 @@ if(CICE_OPENMP)
 endif()
 
 if(CICE_IO MATCHES "^(NetCDF|PIO)$" AND NOT TARGET NetCDF::NetCDF_Fortran)
+  # Code has not been tested with versions older than 4.7.3, but probably still works fine 
   find_package(NetCDF 4.7.3 REQUIRED Fortran)
 endif()
 if(CICE_IO MATCHES "PIO" AND NOT TARGET PIO::PIO_Fortran)
