@@ -132,7 +132,6 @@ set(ICEPACK "${CMAKE_SOURCE_DIR}/../../../icepack")
 add_fortran_library(cicelib mod STATIC)
 
 if(CICE_IO MATCHES "^(NetCDF|PIO)$")
-  # which is this not just an "add_compile_definitions?"
   target_compile_definitions(cicelib PRIVATE FORTRANUNDERSCORE ncdf)
   target_compile_definitions(cicelib PRIVATE USE_NETCDF)
 endif()
