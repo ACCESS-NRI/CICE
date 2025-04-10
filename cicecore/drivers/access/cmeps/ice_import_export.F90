@@ -1424,9 +1424,9 @@ contains
 
    rc = ESMF_SUCCESS
 
-   call state_getfldptr(state, 'net_heat_flx_to_ocn', fhocn_ptr, rc)
-   call state_getfldptr(state, 'mean_fresh_water_to_ocean_rate', fresh_ptr, rc)
-   call state_getfldptr(state, 'mean_salt_rate', fsalt_ptr, rc)
+   call state_getfldptr(state, 'Fioi_melth', fhocn_ptr, rc)
+   call state_getfldptr(state, 'Fioi_meltw', fresh_ptr, rc)
+   call state_getfldptr(state, 'Fioi_salt', fsalt_ptr, rc)
 
    n = 0
    do iblk = 1, nblocks
@@ -2259,8 +2259,8 @@ contains
    call state_getfldptr(importState, 'um_icenth', um_icenth, rc)
    call state_getfldptr(importState, 'um_icesth', um_icesth, rc)
 
-   call state_getfldptr(exportState, 'net_heat_flx_to_ocn', fhocn_ptr, rc)
-   call state_getfldptr(exportState, 'mean_fresh_water_to_ocean_rate', fresh_ptr, rc)
+   call state_getfldptr(exportState, 'Fioi_melth', fhocn_ptr, rc)
+   call state_getfldptr(exportState, 'Fioi_meltw', fresh_ptr, rc)
    
    ! n = 0
    ! do iblk = 1, nblocks
