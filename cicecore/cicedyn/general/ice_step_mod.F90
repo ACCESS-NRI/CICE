@@ -591,6 +591,13 @@
             enddo
          endif ! tr_aero
 
+         call icepack_warnings_flush(nu_diag)
+         if (icepack_warnings_aborted()) then
+            write(nu_diag,*) "iglob, jglob= ", this_block%i_glob(i), ", ", this_block%j_glob(j)
+            call abort_ice(error_message=subname, &
+            file=__FILE__, line=__LINE__)
+         endif
+
       enddo ! i
       enddo ! j
 
