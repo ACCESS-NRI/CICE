@@ -36,7 +36,7 @@ message(STATUS "  - CICE_OPENMP    ${CICE_OPENMP}")
 option(CICE_DRIVER           "CICE driver code to use" OFF)
 if(NOT CICE_DRIVER)
   if(CICE_ACCESS3)
-    set(CICE_DRIVER "nuopc/cmeps")
+    set(CICE_DRIVER "access/cmeps")
   else()
     set(CICE_DRIVER "standalone/cice")
   endif()
@@ -257,7 +257,7 @@ target_sources(cicelib PRIVATE
   ${CICE_CORE}/cicedyn/infrastructure/comm/mpi/ice_timers.F90
 )
 
-if(CICE_DRIVER MATCHES "nuopc/cmeps")
+if(CICE_DRIVER MATCHES "access/cmeps")
   target_sources(cicelib PRIVATE
     # NUOPC CMEPS driver
     ${CICE_CORE}/drivers/${CICE_DRIVER}/CICE_FinalMod.F90
