@@ -15,8 +15,8 @@ jobs:
       # spack-ref: whatever was in the image
 
       ## As well as paths to other spack.yaml files for installation of compilers and template values
-      # spack-compiler-manifest-path: ''
-      # spack-manifest-data-path: ''
+      spack-compiler-manifest-path: .github/build-ci/compilers/compiler.spack.yaml
+      spack-manifest-data-path: .github/build-ci/data/basic.spack.yaml.j2.json
 
       ## Or allow ssh into the container for debugging
-      # allow-ssh-into-spack-install: false
+      allow-ssh-into-spack-install: true
