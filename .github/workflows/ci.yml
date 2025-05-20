@@ -20,3 +20,17 @@ jobs:
 
       ## Or allow ssh into the container for debugging
       allow-ssh-into-spack-install: true
+
+  outputs:
+    runs-on: ubuntu-latest
+    needs: build-and-test
+    steps:
+      - run: |
+          echo "The concretization graph is:"
+          echo "${{ needs.build-and-test.outputs.spec-concretization-graph }}"
+          echo "The files are found in:"
+          echo "${{ needs.build-and-test.outputs.spack-files-artifact-url }}"
+          echo "The ${{ github.repository }} sha is ${{ needs.build-and-test.outputs.sha }}"
+          echo "The spack sha is ${{ needs.build-and-test.outputs.spack-sha }}"
+          echo "The spack config sha is: ${{ needs.build-and-test.outputs.spack-config-sha }}"
+          echo "The spack packages sha is: ${{ needs.build-and-test.outputs.spack-packages-sha }}"
