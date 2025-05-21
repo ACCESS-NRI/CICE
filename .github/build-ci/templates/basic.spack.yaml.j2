@@ -5,7 +5,7 @@
 spack:
   specs:
     # ref is filled in by the workflow, compiler_version is filled in by the jinja data file
-    - access-cice@git.{{ ref }} %intel@{{ compiler_version }} target=x86_64
+    - access-cice@git.{{ ref }} %oneapi@{{ compiler_version }} target=x86_64
   packages:
     # We can still constrain stuff as we always have - or add the dependency to the above spec with `^cmake@3.24.4`
     cmake:
