@@ -20,4 +20,4 @@ jobs:
       # spack-manifest-data-path: ''
 
       ## Or allow ssh into the container for debugging
-      # allow-ssh-into-spack-install: false
+      allow-ssh-into-spack-install: true
