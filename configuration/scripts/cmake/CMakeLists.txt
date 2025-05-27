@@ -102,7 +102,7 @@ if(CICE_ACCESS3)
     message(FATAL_ERROR "ESMF interface missing from Access3Share package")  
   endif()
 else()
-  find_package(MPI REQUIRED)
+  find_package(MPI REQUIRED COMPONENTS Fortran)
 endif()
 
 if(CICE_OPENMP)
@@ -130,6 +130,7 @@ set(CICE_CORE "${CMAKE_SOURCE_DIR}/../../../cicecore")
 set(ICEPACK "${CMAKE_SOURCE_DIR}/../../../icepack")
 
 add_fortran_library(cicelib mod STATIC)
+target_link_libraries(cicelib PUBLIC MPI::MPI_Fortran)
 
 if(CICE_IO MATCHES "^(NetCDF|PIO)$")
   target_compile_definitions(cicelib PRIVATE FORTRANUNDERSCORE ncdf)
