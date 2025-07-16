@@ -1219,9 +1219,9 @@
          ! optional
          missingvalue = spval_dbl
          status = nf90_get_att(fid, varid, "_FillValue", missingvalue)
-!          call ice_check_nc(status, subname//' ERROR: Missing _FillValue', &
-!                            file=__FILE__, line=__LINE__)
-!         write(nu_diag,*) subname,' missingvalue= ',missingvalue
+          call ice_check_nc(status, subname//' ERROR: Missing _FillValue', &
+                            file=__FILE__, line=__LINE__)
+         write(nu_diag,*) subname,' missingvalue= ',missingvalue
          amin = minval(work_g1)
          amax = maxval(work_g1, mask = work_g1 /= missingvalue)
          asum = sum   (work_g1, mask = work_g1 /= missingvalue)
