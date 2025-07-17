@@ -1224,7 +1224,7 @@
          if (isnan(missingvalue)) then
             ! is this useful, do we need to change for actual use of these fields
             write(nu_diag,*) subname,' _FillValue not defined for  '&
-                                     //varname//', resetting to spval'
+                                     //trim(varname)//', resetting to spval'
             missingvalue =  spval_dbl
          endif
          write(nu_diag,*) subname,' missingvalue= ',missingvalue
