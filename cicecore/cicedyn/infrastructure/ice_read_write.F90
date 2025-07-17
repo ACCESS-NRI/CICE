@@ -1219,8 +1219,14 @@
          ! optional
          missingvalue = spval_dbl
          status = nf90_get_att(fid, varid, "_FillValue", missingvalue)
-          call ice_check_nc(status, subname//' ERROR: Missing _FillValue', &
-                            file=__FILE__, line=__LINE__)
+         call ice_check_nc(status, subname//' ERROR: Missing _FillValue', &
+                           file=__FILE__, line=__LINE__)
+         if (isnan(missingvalue)) then
+            ! is this useful, do we need to change for actual use of these fields
+            write(nu_diag,*) subname,' _FillValue not defined for  '&
+                                     //varname//', resetting to spval'
+            missingvalue =  spval_dbl
+         endif
          write(nu_diag,*) subname,' missingvalue= ',missingvalue
          amin = minval(work_g1)
          amax = maxval(work_g1, mask = work_g1 /= missingvalue)
