@@ -1,0 +1,16 @@
+spack:
+  specs:
+    - access-cice @git.{{ ref }} ~access3 io_type=PIO %intel@2021.10.0
+    - access-cice @git.{{ ref }} ~access3 io_type=PIO +openmp %oneapi@2025.2.0
+    - access-cice @git.{{ ref }} ~access3 io_type=PIO %oneapi@2025.2.0
+
+    - access-cice @git.{{ ref }} ~access3 io_type=NetCDF %intel@2021.10.0
+    - access-cice @git.{{ ref }} ~access3 io_type=NetCDF %oneapi@2025.2.0
+
+    - access-cice @git.{{ ref }} ~access3 io_type=Binary %intel@2021.10.0
+    - access-cice @git.{{ ref }} ~access3 io_type=Binary %oneapi@2025.2.0
+
+    - access-cice @git.{{ ref }} ~access3 io_type=PIO %gcc@13.2.0
+  concretizer:
+    unify: false
+  view: false

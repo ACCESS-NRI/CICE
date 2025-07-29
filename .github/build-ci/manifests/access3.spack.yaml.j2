@@ -1,0 +1,12 @@
+spack:
+  specs:
+    - access-cice @git.{{ ref }} +access3 io_type=PIO %intel@2021.10.0
+    - access-cice @git.{{ ref }} +access3 io_type=PIO build_type=Debug %oneapi@2025.2.0
+    - access-cice @git.{{ ref }} +access3 io_type=PIO %oneapi@2025.2.0
+  packages:
+    esmf:
+      require:
+        - '@8.6.0'
+  concretizer:
+    unify: false
+  view: false
