@@ -11,6 +11,10 @@ spack:
     - access-cice @git.{{ ref }} ~access3 io_type=Binary %oneapi@2025.2.0
 
     - access-cice @git.{{ ref }} ~access3 io_type=PIO %gcc@13.2.0
+  packages:
+    openmpi:
+      require:
+      - '%oneapi@2025.2.0'
   concretizer:
     unify: false
   view: false
