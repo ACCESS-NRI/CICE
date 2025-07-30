@@ -1,0 +1,10 @@
+spack:
+  specs:
+  - access-cice @git.{{ ref }} ~access3 io_type=PIO %gcc@13.2.0
+  packages:
+    all:
+      require:
+      - '%gcc@13.2.0'
+  concretizer:
+    unify: false
+  view: false
