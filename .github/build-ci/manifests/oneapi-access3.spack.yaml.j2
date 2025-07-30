@@ -1,17 +1,17 @@
 spack:
   specs:
-    - access-cice @git.{{ ref }} +access3 io_type=PIO build_type=Debug %oneapi@2025.2.0
-    - access-cice @git.{{ ref }} +access3 io_type=PIO %oneapi@2025.2.0
+    - access-cice @git.{{ ref }} +access3 io_type=PIO build_type=Debug %oneapi@2025.2.0 target=x86_64
+    - access-cice @git.{{ ref }} +access3 io_type=PIO %oneapi@2025.2.0 target=x86_64
   packages:
     esmf:
       require:
         - '@git.v8.7.0=8.7.0'
     gcc-runtime:
       require:
-      - '%gcc'
+      - '%gcc target=x86_64'
     all:
       require:
-        - '%oneapi@2025.2.0'
+        - '%oneapi@2025.2.0 target=x86_64'
   concretizer:
     unify: false
   view: false
