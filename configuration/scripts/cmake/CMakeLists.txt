@@ -130,10 +130,11 @@ set(CICE_CORE "${CMAKE_SOURCE_DIR}/../../../cicecore")
 set(ICEPACK "${CMAKE_SOURCE_DIR}/../../../icepack")
 
 add_fortran_library(cicelib mod STATIC)
+target_compile_definitions(cicelib PRIVATE FORTRANUNDERSCORE)
 target_link_libraries(cicelib PUBLIC MPI::MPI_Fortran)
 
 if(CICE_IO MATCHES "^(NetCDF|PIO)$")
-  target_compile_definitions(cicelib PRIVATE FORTRANUNDERSCORE ncdf)
+  target_compile_definitions(cicelib PRIVATE ncdf)
   target_compile_definitions(cicelib PRIVATE USE_NETCDF)
 endif()
 if(CICE_ACCESS3)
