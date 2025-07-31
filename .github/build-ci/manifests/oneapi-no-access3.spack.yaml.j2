@@ -1,16 +1,16 @@
 spack:
   specs:
-    - access-cice @git.{{ ref }} ~access3 io_type=PIO +openmp %oneapi@2025.2.0 target=x86_64
-    - access-cice @git.{{ ref }} ~access3 io_type=PIO %oneapi@2025.2.0 target=x86_64
-    - access-cice @git.{{ ref }} ~access3 io_type=NetCDF %oneapi@2025.2.0 target=x86_64
-    - access-cice @git.{{ ref }} ~access3 io_type=Binary %oneapi@2025.2.0 target=x86_64
+    - access-cice @git.{{ ref }} ~access3 io_type=PIO +openmp
+    - access-cice @git.{{ ref }} ~access3 io_type=PIO
+    - access-cice @git.{{ ref }} ~access3 io_type=NetCDF
+    - access-cice @git.{{ ref }} ~access3 io_type=Binary
   packages:
     gcc-runtime:
       require:
-      - '%gcc target=x86_64'
+      - '%gcc target={{ target }}'
     all:
       require:
-      - '%oneapi@2025.2.0 target=x86_64'
+      - '%{{ oneapi_compiler }} target={{ target }}'
   concretizer:
     unify: false
   view: false
