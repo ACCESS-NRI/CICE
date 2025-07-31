@@ -2,6 +2,9 @@ spack:
   specs:
   - access-cice @git.{{ ref }} +access3 io_type=PIO
   packages:
+    access3-share:
+      require:
+        - '@git.9158ee74be1ab75249c8d6a3f9d45e8d943318d2'
     esmf:
       require:
       - '@git.v8.7.0=8.7.0'
