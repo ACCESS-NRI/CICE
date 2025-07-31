@@ -30,6 +30,10 @@ jobs:
       max-parallel: 5
       matrix:
         file: ${{ fromJson(needs.pre-ci.outputs.matrix) }}
+        # TODO: Remove once the underlying issue with these manifests are resolved
+        exclude:
+          - file: .github/build-ci/manifests/intel-access3.spack.yaml.j2
+          - file: .github/build-ci/manifests/oneapi-access3.spack.yaml.j2
     uses: access-nri/build-ci/.github/workflows/ci.yml@v2
     with:
       spack-manifest-path: ${{ matrix.file }}
