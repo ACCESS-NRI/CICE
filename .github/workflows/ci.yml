@@ -37,4 +37,4 @@ jobs:
       spack-manifest-data-path: .github/build-ci/data/standard.json
       spack-packages-ref: 498242a86ca5db015403ef80fc0161e44d41223c
       # spack-config-ref: main
-      # spack-ref: 7d18920bf93312a3d9ce3c563acf11e7eaddfd1f
+      spack-ref: 7d18920bf93312a3d9ce3c563acf11e7eaddfd1f
