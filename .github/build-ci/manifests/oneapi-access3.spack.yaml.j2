@@ -1,0 +1,19 @@
+spack:
+  specs:
+    - access-cice @git.{{ ref }} +access3 io_type=PIO build_type=Debug
+    - access-cice @git.{{ ref }} +access3 io_type=PIO
+  packages:
+    gcc-runtime:
+      require:
+      - '%access_gcc'
+      - target={{ target }}
+    intel-oneapi-compilers:
+      require:
+      - '@{{ oneapi_compiler_version }}'
+    all:
+      require:
+        - '%access_oneapi'
+        - target={{ target }}
+  concretizer:
+    unify: false
+  view: false
