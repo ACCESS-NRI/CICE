@@ -30,7 +30,7 @@ jobs:
       max-parallel: 5
       matrix:
         file: ${{ fromJson(needs.pre-ci.outputs.matrix) }}
-        # TODO: Remove once the underlying issue with these manifests are resolved
+        # TODO: Builds were failing due to https://github.com/ACCESS-NRI/access3-share/pull/9, we need this added to the access3-share spack package - (https://github.com/ACCESS-NRI/spack-packages/pull/290)
         exclude:
           - file: .github/build-ci/manifests/intel-access3.spack.yaml.j2
           - file: .github/build-ci/manifests/oneapi-access3.spack.yaml.j2

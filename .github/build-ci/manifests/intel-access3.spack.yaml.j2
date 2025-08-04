@@ -2,9 +2,6 @@ spack:
   specs:
   - access-cice @git.{{ ref }} +access3 io_type=PIO
   packages:
-    esmf:
-      require:
-      - '@git.v8.7.0=8.7.0'
     all:
       require:
       - '%{{ intel_compiler }} target={{ target }}'
