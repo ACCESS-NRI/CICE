@@ -1,0 +1,12 @@
+spack:
+  specs:
+  - access-cice @git.{{ ref }} ~access3 io_type=PIO
+  - access-cice @git.{{ ref }} ~access3 io_type=NetCDF
+  - access-cice @git.{{ ref }} ~access3 io_type=Binary
+  packages:
+    all:
+      require:
+      - '%{{ intel_compiler }} target={{ target }}'
+  concretizer:
+    unify: false
+  view: false
