@@ -1,3 +1,4 @@
 atm_data_format = 'nc'
 atm_data_type   = 'JRA55do'
 atm_data_version = ''
+atm_data_dir    = 'ICE_MACHINE_INPUTDATA/CICE_data/forcing/a025/JRA55do/'

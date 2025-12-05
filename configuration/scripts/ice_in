@@ -14,7 +14,7 @@
     ice_ic         = './restart/iced_gx3_v5.nc'
     restart_ext    = .false.
     use_restart_time = .false.
-    restart_format = 'default'
+    restart_format = 'hdf5'
     restart_rearranger = 'default'
     restart_iotasks = -99
     restart_root   = -99
@@ -60,7 +60,7 @@
     history_dir    = './history/'
     history_file   = 'iceh'
     history_precision = 4
-    history_format = 'default'
+    history_format = 'hdf5'
     history_rearranger = 'default'
     history_iotasks = -99
     history_root   = -99

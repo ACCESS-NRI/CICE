@@ -2223,9 +2223,13 @@
       logical :: &
            exists     ! file existance
 
+      character(len=4) :: year_str  ! fyear_init string
+
       character(len=*), parameter :: subname = '(JRA55_files)'
 
       if (local_debug .and. my_task == master_task) write(nu_diag,*) subname,'fdbg start'
+
+      write(year_str, '(I0)') fyear_init
 
       ! this could be JRA55[do] or JRA55[do]_grid, drop the _grid if set
       atm_data_type_prefix = trim(atm_data_type)
@@ -2241,6 +2245,8 @@
          grd = 'gx3'
       else if (index(trim(atm_data_dir),'tx1') > 0) then
          grd = 'tx1'
+      else if (index(trim(atm_data_dir),'a025') > 0) then
+         grd = 'a025'
       else
          call abort_ice(error_message=subname//' unknown grid type')
       endif
@@ -2252,27 +2258,27 @@
 
          if (cnt == 1) uwind_file = trim(atm_data_dir)//'/'//trim(atm_data_type_prefix)//     &
                                     '/8XDAILY/'//trim(atm_data_type_prefix)//'_'//trim(grd)// &
-                                    '_03hr_forcing'//trim(atm_data_version)//'_2005.nc'
+                                    '_03hr_forcing'//trim(atm_data_version)//'_'//year_str//'.nc'
 
          if (cnt == 2) uwind_file = trim(atm_data_dir)//'/'//trim(atm_data_type_prefix)//                  &
                                     '/8XDAILY/'//trim(atm_data_type_prefix)//'_03hr_forcing_'//trim(grd)// &
-                                    trim(atm_data_version)//'_2005.nc'
+                                    trim(atm_data_version)//'_'//year_str//'.nc'
 
          if (cnt == 3) uwind_file = trim(atm_data_dir)//'/'//trim(atm_data_type_prefix)// &
                                     '/8XDAILY/'//trim(atm_data_type_prefix)//             &
-                                    '_03hr_forcing'//trim(atm_data_version)//'_2005.nc'
+                                    '_03hr_forcing'//trim(atm_data_version)//'_'//year_str//'.nc'
 
          if (cnt == 4) uwind_file = trim(atm_data_dir)//                                      &
                                     '/8XDAILY/'//trim(atm_data_type_prefix)//'_'//trim(grd)// &
-                                    '_03hr_forcing'//trim(atm_data_version)//'_2005.nc'
+                                    '_03hr_forcing'//trim(atm_data_version)//'_'//year_str//'.nc'
 
          if (cnt == 5) uwind_file = trim(atm_data_dir)//                                                   &
                                     '/8XDAILY/'//trim(atm_data_type_prefix)//'_03hr_forcing_'//trim(grd)// &
-                                    trim(atm_data_version)//'_2005.nc'
+                                    trim(atm_data_version)//'_'//year_str//'.nc'
 
          if (cnt == 6) uwind_file = trim(atm_data_dir)//                                  &
                                     '/8XDAILY/'//trim(atm_data_type_prefix)//             &
-                                    '_03hr_forcing'//trim(atm_data_version)//'_2005.nc'
+                                    '_03hr_forcing'//trim(atm_data_version)//'_'//year_str//'.nc'
 
 
          call file_year(uwind_file,yr)

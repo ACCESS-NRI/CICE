@@ -16,7 +16,7 @@
 #PBS -l walltime=06:00:00
 #PBS -A P93300665
 
-set scripts_dir = "/glade/work/tcraig/cice-consortium/cice.jra55_tool/configuration/tools/jra55_datasets"
+set scripts_dir = "/g/data/tm70/as2285/model-code/CICE/configuration/tools/jra55_datasets"
 set jra55_data_dir = "/glade/scratch/dbailey/JRA_DATA/"
 set output_data_dir = "/glade/scratch/tcraig/JRA_DATA_output"
 set grid = "gx3"
