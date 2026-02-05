@@ -1063,7 +1063,7 @@ contains
     endif
 
     ! Create a temporary field
-    allocate(tempfld(nx_block,ny_block,nblocks))
+    allocate(tempfld(nx_block,ny_block,max_blocks))
 
     ! Fractions and mask
     call state_setexport(exportState, 'Si_ifrac', input=ailohi, rc=rc)
