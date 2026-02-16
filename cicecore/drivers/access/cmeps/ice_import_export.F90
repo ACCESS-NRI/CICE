@@ -128,8 +128,6 @@ contains
     rc = ESMF_SUCCESS
     if (io_dbug > 5) call ESMF_LogWrite(subname//' called', ESMF_LOGMSG_INFO)
 
-   !  call get_lice_discharge_masks_or_iceberg('lice_discharge_masks_iceberg.nc')
-
     ! Determine if ice sends multiple ice category info back to mediator
     send_i2x_per_cat = .false.
     call NUOPC_CompAttributeGet(gcomp, name='flds_i2o_per_cat', value=cvalue, &
@@ -2107,8 +2105,6 @@ contains
    
    character(len=100) :: tmpString
 
-   call fldlist_add(fldsToIce_num, fldsToIce, 'um_icenth')
-   call fldlist_add(fldsToIce_num, fldsToIce, 'um_icesth')
    call fldlist_add(fldsToIce_num, fldsToIce, 'pen_rad', ungridded_lbound=1, ungridded_ubound=ncat)   
    call fldlist_add(fldsToIce_num, fldsToIce, 'topmelt', ungridded_lbound=1, ungridded_ubound=ncat)   
    call fldlist_add(fldsToIce_num, fldsToIce, 'botmelt', ungridded_lbound=1, ungridded_ubound=ncat)   
@@ -2255,57 +2251,9 @@ contains
    call state_setexport(exportState, 'ia_itopt', input=tempfld, lmask=tmask, ifrac=ailohi, rc=rc, ungridded_index=n)
    call state_setexport(exportState, 'ia_itopk', input=tempfld1, lmask=tmask, ifrac=ailohi, rc=rc, ungridded_index=n)
    end do
-   
-   call state_getfldptr(importState, 'um_icenth', um_icenth, rc)
-   call state_getfldptr(importState, 'um_icesth', um_icesth, rc)
 
    call state_getfldptr(exportState, 'Fioi_melth', fhocn_ptr, rc)
    call state_getfldptr(exportState, 'Fioi_meltw', fresh_ptr, rc)
-   
-   ! n = 0
-   ! do iblk = 1, nblocks
-   !    this_block = get_block(blocks_ice(iblk),iblk)
-   !    ilo = this_block%ilo
-   !    ihi = this_block%ihi
-   !    jlo = this_block%jlo
-   !    jhi = this_block%jhi
-   !    do j = jlo, jhi
-   !       do i = ilo, ihi
-   !          n = n + 1
-
-   !          if (tmask(i,j,iblk)) then
-
-   !             if (lice_nth(i,j,iblk) == 0.0) then
-   !                lice_nth(i,j,iblk) = um_icenth(n)
-   !             end if
-
-   !             if (lice_sth(i,j,iblk) == 0.0) then
-   !                lice_sth(i,j,iblk) = um_icesth(n)
-   !             end if
-
-   !             if (amsk_nth(i,j,iblk) > 0.0) then
-   !                licefw = max(0.0, um_icenth(n) - lice_nth(i,j,iblk)) * msk_nth(i,j,iblk) / amsk_nth(i,j,iblk) 
-   !             else if (amsk_sth(i,j,iblk) > 0.0) then
-   !                licefw = max(0.0, um_icesth(n) - lice_sth(i,j,iblk)) * msk_sth(i,j,iblk) / amsk_sth(i,j,iblk)
-   !             else
-   !                licefw = 0.0
-   !             end if
-               
-   !             licefw = licefw / cpl_dt
-
-   !             liceht = -licefw * Lfresh
-               
-   !             ! fresh_ptr(n) = fresh_ptr(n) + licefw
-   !             ! fhocn_ptr(n) = fhocn_ptr(n) + liceht
-
-   !             lice_nth(i,j,iblk) = um_icenth(n)
-   !             lice_sth(i,j,iblk) = um_icesth(n)
-
-   !          end if
-
-   !       end do
-   !    end do
-   ! end do
 
   end subroutine ice_export_access
 
@@ -2351,44 +2299,5 @@ contains
    end function calculate_ki_from_Tin
 
    subroutine get_lice_discharge_masks_or_iceberg(fname)
-
-      ! Called at beginning of each run trunk to read in land ice discharge mask or iceberg
-      ! (off Antarctica and Greenland).
-      
-      implicit none
-      
-      character(len=*), intent(in) :: fname
-      character*80 :: myvar = 'ficeberg'
-      integer(kind=int_kind) :: ncid_i2o, im, k
-      logical :: dbug
-      !!!
-      !character(:), allocatable :: fname_trim
-      !!!
-
-      allocate (lice_nth(nx_block,ny_block,max_blocks)); lice_nth(:,:,:) = 0
-      allocate (lice_sth(nx_block,ny_block,max_blocks)); lice_sth(:,:,:) = 0
-      allocate (msk_nth(nx_block,ny_block,max_blocks));  msk_nth(:,:,:) = 0
-      allocate (msk_sth(nx_block,ny_block,max_blocks));  msk_sth(:,:,:) = 0
-      allocate (amsk_nth(nx_block,ny_block,max_blocks)); amsk_nth(:,:,:) = 0
-      allocate (amsk_sth(nx_block,ny_block,max_blocks)); amsk_sth(:,:,:) = 0
-      
-      dbug = .true.
-      
-      !!!
-      !fname_trim = trim(fname)
-      !!!
-      if (my_task == 0) write(*,'(a,a)'),'BBB1: opening file ',fname
-      if (my_task == 0) write(*,'(a,a)'),'BBB2: opening file ',trim(fname)
-      
-      call ice_open_nc(trim(fname), ncid_i2o)
-
-      call ice_read_nc(ncid_i2o, 1, 'msk_nth',    msk_nth,   dbug)
-      call ice_read_nc(ncid_i2o, 1, 'msk_sth',    msk_sth,   dbug)
-      call ice_read_nc(ncid_i2o, 1, 'amsk_nth',   amsk_nth,  dbug)
-      call ice_read_nc(ncid_i2o, 1, 'amsk_sth',   amsk_sth,  dbug)
-      
-      
-      return
-   end subroutine get_lice_discharge_masks_or_iceberg
 
 end module ice_import_export
