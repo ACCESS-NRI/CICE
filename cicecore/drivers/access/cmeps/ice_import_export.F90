@@ -2131,9 +2131,9 @@ contains
    
    character(len=100) :: tmpString
 
-   call fldlist_add(fldsFrIce_num , fldsFrIce, 'ia_aicen', ungridded_lbound=1, ungridded_ubound=ncat) ! from ice_state field: aicen
-   call fldlist_add(fldsFrIce_num , fldsFrIce, 'ia_snown', ungridded_lbound=1, ungridded_ubound=ncat) ! from ice_state field: vsnon
-   call fldlist_add(fldsFrIce_num , fldsFrIce, 'ia_thikn', ungridded_lbound=1, ungridded_ubound=ncat) ! from ice_state field: vicen
+   call fldlist_add(fldsFrIce_num , fldsFrIce, 'Si_ifrac_n', ungridded_lbound=1, ungridded_ubound=ncat) ! from ice_state field: aicen
+   call fldlist_add(fldsFrIce_num , fldsFrIce, 'Si_vsno_n', ungridded_lbound=1, ungridded_ubound=ncat) ! from ice_state field: vsnon
+   call fldlist_add(fldsFrIce_num , fldsFrIce, 'Si_vice_n', ungridded_lbound=1, ungridded_ubound=ncat) ! from ice_state field: vicen
 
    call fldlist_add(fldsFrIce_num , fldsFrIce, 'ia_itopt', ungridded_lbound=1, ungridded_ubound=ncat) ! from ice flux: Tn_top
    call fldlist_add(fldsFrIce_num , fldsFrIce, 'ia_itopk', ungridded_lbound=1, ungridded_ubound=ncat) ! from ice flux: keffn_top
@@ -2192,9 +2192,9 @@ contains
    allocate(pndtn_scaled(nx_block,ny_block,ncat,nblocks))
    
    do n = 1, ncat
-      call state_setexport(exportState, 'ia_aicen', input=aicen , lmask=tmask, ifrac=ailohi, rc=rc, index=n, ungridded_index=n)
-      call state_setexport(exportState, 'ia_snown', input=vsnon , lmask=tmask, ifrac=ailohi, rc=rc, index=n, ungridded_index=n)
-      call state_setexport(exportState, 'ia_thikn', input=vicen , lmask=tmask, ifrac=ailohi, rc=rc, index=n, ungridded_index=n)
+      call state_setexport(exportState, 'Si_ifrac_n', input=aicen , lmask=tmask, ifrac=ailohi, rc=rc, index=n, ungridded_index=n)
+      call state_setexport(exportState, 'Si_vsno_n', input=vsnon , lmask=tmask, ifrac=ailohi, rc=rc, index=n, ungridded_index=n)
+      call state_setexport(exportState, 'Si_vice_n', input=vicen , lmask=tmask, ifrac=ailohi, rc=rc, index=n, ungridded_index=n)
    end do
 
    call state_setexport(exportState, 'sstfrz', input=Tf , lmask=tmask, ifrac=ailohi, rc=rc)
