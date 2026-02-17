@@ -2298,6 +2298,4 @@ contains
 
    end function calculate_ki_from_Tin
 
-   subroutine get_lice_discharge_masks_or_iceberg(fname)
-
 end module ice_import_export
