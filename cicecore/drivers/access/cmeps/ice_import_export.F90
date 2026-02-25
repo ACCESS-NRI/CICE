@@ -588,10 +588,10 @@ contains
 
     ! now fill in the ice internal data types
     do i=1,ncat
-      call state_getimport(importState, 'sublim', output=flatn_f, index=i, ungridded_index=i, rc=rc)
-      call state_getimport(importState, 'botmelt', output=fcondtopn_f, index=i, ungridded_index=i, rc=rc)
-      call state_getimport(importState, 'topmelt', output=fsurfn_f, index=i, ungridded_index=i, rc=rc)
-      call state_getimport(importState, 'tstar_sice', output=trcrn(:,:,nt_Tsfc,:,:), index=i, ungridded_index=i, rc=rc)
+      call state_getimport(importState, 'Faxa_sublim_n', output=flatn_f, index=i, ungridded_index=i, rc=rc)
+      call state_getimport(importState, 'Faxa_condtop_n', output=fcondtopn_f, index=i, ungridded_index=i, rc=rc)
+      call state_getimport(importState, 'Faxa_melthtop_n', output=fsurfn_f, index=i, ungridded_index=i, rc=rc)
+      call state_getimport(importState, 'Sa_tskn_n', output=trcrn(:,:,nt_Tsfc,:,:), index=i, ungridded_index=i, rc=rc)
     end do
 
     !$OMP PARALLEL DO PRIVATE(iblk,i,j)
@@ -2105,11 +2105,11 @@ contains
    
    character(len=100) :: tmpString
 
-   call fldlist_add(fldsToIce_num, fldsToIce, 'pen_rad', ungridded_lbound=1, ungridded_ubound=ncat)   
-   call fldlist_add(fldsToIce_num, fldsToIce, 'topmelt', ungridded_lbound=1, ungridded_ubound=ncat)   
-   call fldlist_add(fldsToIce_num, fldsToIce, 'botmelt', ungridded_lbound=1, ungridded_ubound=ncat)   
-   call fldlist_add(fldsToIce_num, fldsToIce, 'tstar_sice', ungridded_lbound=1, ungridded_ubound=ncat)   
-   call fldlist_add(fldsToIce_num, fldsToIce, 'sublim', ungridded_lbound=1, ungridded_ubound=ncat)   
+   call fldlist_add(fldsToIce_num, fldsToIce, 'Faxa_swpen_n', ungridded_lbound=1, ungridded_ubound=ncat)
+   call fldlist_add(fldsToIce_num, fldsToIce, 'Faxa_melthtop_n', ungridded_lbound=1, ungridded_ubound=ncat)
+   call fldlist_add(fldsToIce_num, fldsToIce, 'Faxa_condtop_n', ungridded_lbound=1, ungridded_ubound=ncat)
+   call fldlist_add(fldsToIce_num, fldsToIce, 'Sa_tskn_n', ungridded_lbound=1, ungridded_ubound=ncat)
+   call fldlist_add(fldsToIce_num, fldsToIce, 'Faxa_sublim_n', ungridded_lbound=1, ungridded_ubound=ncat)
    
    write (tmpString, *) ncat
    call ESMF_LogWrite("CICE number of ice categories: " // trim(tmpString))
@@ -2131,10 +2131,10 @@ contains
    call fldlist_add(fldsFrIce_num , fldsFrIce, 'Si_vsno_n', ungridded_lbound=1, ungridded_ubound=ncat) ! from ice_state field: vsnon
    call fldlist_add(fldsFrIce_num , fldsFrIce, 'Si_vice_n', ungridded_lbound=1, ungridded_ubound=ncat) ! from ice_state field: vicen
 
-   call fldlist_add(fldsFrIce_num , fldsFrIce, 'ia_itopt', ungridded_lbound=1, ungridded_ubound=ncat) ! from ice flux: Tn_top
-   call fldlist_add(fldsFrIce_num , fldsFrIce, 'ia_itopk', ungridded_lbound=1, ungridded_ubound=ncat) ! from ice flux: keffn_top
-   call fldlist_add(fldsFrIce_num , fldsFrIce, 'ia_pndfn', ungridded_lbound=1, ungridded_ubound=ncat) ! from icepack_shorwave: apeffn
-   call fldlist_add(fldsFrIce_num , fldsFrIce, 'ia_pndtn', ungridded_lbound=1, ungridded_ubound=ncat) ! from ice state field: trcrn
+   call fldlist_add(fldsFrIce_num , fldsFrIce, 'Si_topt', ungridded_lbound=1, ungridded_ubound=ncat) ! from ice flux: Tn_top
+   call fldlist_add(fldsFrIce_num , fldsFrIce, 'Si_topk', ungridded_lbound=1, ungridded_ubound=ncat) ! from ice flux: keffn_top
+   call fldlist_add(fldsFrIce_num , fldsFrIce, 'Si_pndf_n', ungridded_lbound=1, ungridded_ubound=ncat) ! from icepack_shorwave: apeffn
+   call fldlist_add(fldsFrIce_num , fldsFrIce, 'Si_pndt_n', ungridded_lbound=1, ungridded_ubound=ncat) ! from ice state field: trcrn
    call fldlist_add(fldsFrIce_num , fldsFrIce, 'sstfrz')
 
    write (tmpString, *) ncat
@@ -2202,8 +2202,8 @@ contains
    pndtn_scaled(:,:,:,:) = trcrn(:,:,nt_hpnd,:,:) * apeffn(:,:,:,:) * aicen(:,:,:,:)
 
    do n = 1, ncat
-      call state_setexport(exportState, 'ia_pndfn', input=pndfn_scaled, lmask=tmask, ifrac=ailohi, rc=rc, index=n, ungridded_index=n)
-      call state_setexport(exportState, 'ia_pndtn', input=pndtn_scaled, lmask=tmask, ifrac=ailohi, rc=rc, index=n, ungridded_index=n)
+      call state_setexport(exportState, 'Si_pndf_n', input=pndfn_scaled, lmask=tmask, ifrac=ailohi, rc=rc, index=n, ungridded_index=n)
+      call state_setexport(exportState, 'Si_pndt_n', input=pndtn_scaled, lmask=tmask, ifrac=ailohi, rc=rc, index=n, ungridded_index=n)
    end do
 
    rnslyr = real(nslyr,kind=dbl_kind)      
@@ -2248,8 +2248,8 @@ contains
          end do
       end do
    end do
-   call state_setexport(exportState, 'ia_itopt', input=tempfld, lmask=tmask, ifrac=ailohi, rc=rc, ungridded_index=n)
-   call state_setexport(exportState, 'ia_itopk', input=tempfld1, lmask=tmask, ifrac=ailohi, rc=rc, ungridded_index=n)
+   call state_setexport(exportState, 'Si_topt', input=tempfld, lmask=tmask, ifrac=ailohi, rc=rc, ungridded_index=n)
+   call state_setexport(exportState, 'Si_topk', input=tempfld1, lmask=tmask, ifrac=ailohi, rc=rc, ungridded_index=n)
    end do
 
    call state_getfldptr(exportState, 'Fioi_melth', fhocn_ptr, rc)
