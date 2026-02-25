@@ -82,7 +82,7 @@ endif()
 
 if (CICE_ACCESS3)
   add_compile_definitions(
-    CESMCOUPLED
+    CESMCOUPLED CICE_ACCESS3
   )
 endif()
 
