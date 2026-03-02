@@ -4,9 +4,13 @@ spack:
   - access-cice @git.{{ ref }} ~access3 io_type=NetCDF
   - access-cice @git.{{ ref }} ~access3 io_type=Binary
   packages:
+    intel-oneapi-compilers-classic:
+      require:
+      - '@{{ intel_compiler_version }}'
     all:
       require:
-      - '%{{ intel_compiler }} target={{ target }}'
+      - '%access_intel'
+      - target={{ target }}
   concretizer:
     unify: false
   view: false
