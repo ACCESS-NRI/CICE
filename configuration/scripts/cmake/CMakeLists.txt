@@ -83,6 +83,7 @@ endif()
 if (CICE_ACCESS3)
   add_compile_definitions(
     CESMCOUPLED
+    NO_SNICARHC
   )
 endif()
 
