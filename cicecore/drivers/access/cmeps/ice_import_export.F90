@@ -128,8 +128,6 @@ contains
     rc = ESMF_SUCCESS
     if (io_dbug > 5) call ESMF_LogWrite(subname//' called', ESMF_LOGMSG_INFO)
 
-   !  call get_lice_discharge_masks_or_iceberg('lice_discharge_masks_iceberg.nc')
-
     ! Determine if ice sends multiple ice category info back to mediator
     send_i2x_per_cat = .false.
     call NUOPC_CompAttributeGet(gcomp, name='flds_i2o_per_cat', value=cvalue, &
@@ -590,10 +588,10 @@ contains
 
     ! now fill in the ice internal data types
     do i=1,ncat
-      call state_getimport(importState, 'sublim', output=flatn_f, index=i, ungridded_index=i, rc=rc)
-      call state_getimport(importState, 'botmelt', output=fcondtopn_f, index=i, ungridded_index=i, rc=rc)
-      call state_getimport(importState, 'topmelt', output=fsurfn_f, index=i, ungridded_index=i, rc=rc)
-      call state_getimport(importState, 'tstar_sice', output=trcrn(:,:,nt_Tsfc,:,:), index=i, ungridded_index=i, rc=rc)
+      call state_getimport(importState, 'Faxa_sublim_n', output=flatn_f, index=i, ungridded_index=i, rc=rc)
+      call state_getimport(importState, 'Faxa_condtop_n', output=fcondtopn_f, index=i, ungridded_index=i, rc=rc)
+      call state_getimport(importState, 'Faxa_melthtop_n', output=fsurfn_f, index=i, ungridded_index=i, rc=rc)
+      call state_getimport(importState, 'Sa_tskn_n', output=trcrn(:,:,nt_Tsfc,:,:), index=i, ungridded_index=i, rc=rc)
     end do
 
     !$OMP PARALLEL DO PRIVATE(iblk,i,j)
@@ -2107,13 +2105,11 @@ contains
    
    character(len=100) :: tmpString
 
-   call fldlist_add(fldsToIce_num, fldsToIce, 'um_icenth')
-   call fldlist_add(fldsToIce_num, fldsToIce, 'um_icesth')
-   call fldlist_add(fldsToIce_num, fldsToIce, 'pen_rad', ungridded_lbound=1, ungridded_ubound=ncat)   
-   call fldlist_add(fldsToIce_num, fldsToIce, 'topmelt', ungridded_lbound=1, ungridded_ubound=ncat)   
-   call fldlist_add(fldsToIce_num, fldsToIce, 'botmelt', ungridded_lbound=1, ungridded_ubound=ncat)   
-   call fldlist_add(fldsToIce_num, fldsToIce, 'tstar_sice', ungridded_lbound=1, ungridded_ubound=ncat)   
-   call fldlist_add(fldsToIce_num, fldsToIce, 'sublim', ungridded_lbound=1, ungridded_ubound=ncat)   
+   call fldlist_add(fldsToIce_num, fldsToIce, 'Faxa_swpen_n', ungridded_lbound=1, ungridded_ubound=ncat)
+   call fldlist_add(fldsToIce_num, fldsToIce, 'Faxa_melthtop_n', ungridded_lbound=1, ungridded_ubound=ncat)
+   call fldlist_add(fldsToIce_num, fldsToIce, 'Faxa_condtop_n', ungridded_lbound=1, ungridded_ubound=ncat)
+   call fldlist_add(fldsToIce_num, fldsToIce, 'Sa_tskn_n', ungridded_lbound=1, ungridded_ubound=ncat)
+   call fldlist_add(fldsToIce_num, fldsToIce, 'Faxa_sublim_n', ungridded_lbound=1, ungridded_ubound=ncat)
    
    write (tmpString, *) ncat
    call ESMF_LogWrite("CICE number of ice categories: " // trim(tmpString))
@@ -2131,14 +2127,14 @@ contains
    
    character(len=100) :: tmpString
 
-   call fldlist_add(fldsFrIce_num , fldsFrIce, 'ia_aicen', ungridded_lbound=1, ungridded_ubound=ncat) ! from ice_state field: aicen
-   call fldlist_add(fldsFrIce_num , fldsFrIce, 'ia_snown', ungridded_lbound=1, ungridded_ubound=ncat) ! from ice_state field: vsnon
-   call fldlist_add(fldsFrIce_num , fldsFrIce, 'ia_thikn', ungridded_lbound=1, ungridded_ubound=ncat) ! from ice_state field: vicen
+   call fldlist_add(fldsFrIce_num , fldsFrIce, 'Si_ifrac_n', ungridded_lbound=1, ungridded_ubound=ncat) ! from ice_state field: aicen
+   call fldlist_add(fldsFrIce_num , fldsFrIce, 'Si_vsno_n', ungridded_lbound=1, ungridded_ubound=ncat) ! from ice_state field: vsnon
+   call fldlist_add(fldsFrIce_num , fldsFrIce, 'Si_vice_n', ungridded_lbound=1, ungridded_ubound=ncat) ! from ice_state field: vicen
 
-   call fldlist_add(fldsFrIce_num , fldsFrIce, 'ia_itopt', ungridded_lbound=1, ungridded_ubound=ncat) ! from ice flux: Tn_top
-   call fldlist_add(fldsFrIce_num , fldsFrIce, 'ia_itopk', ungridded_lbound=1, ungridded_ubound=ncat) ! from ice flux: keffn_top
-   call fldlist_add(fldsFrIce_num , fldsFrIce, 'ia_pndfn', ungridded_lbound=1, ungridded_ubound=ncat) ! from icepack_shorwave: apeffn
-   call fldlist_add(fldsFrIce_num , fldsFrIce, 'ia_pndtn', ungridded_lbound=1, ungridded_ubound=ncat) ! from ice state field: trcrn
+   call fldlist_add(fldsFrIce_num , fldsFrIce, 'Si_topt', ungridded_lbound=1, ungridded_ubound=ncat) ! from ice flux: Tn_top
+   call fldlist_add(fldsFrIce_num , fldsFrIce, 'Si_topk', ungridded_lbound=1, ungridded_ubound=ncat) ! from ice flux: keffn_top
+   call fldlist_add(fldsFrIce_num , fldsFrIce, 'Si_pndf_n', ungridded_lbound=1, ungridded_ubound=ncat) ! from icepack_shorwave: apeffn
+   call fldlist_add(fldsFrIce_num , fldsFrIce, 'Si_pndt_n', ungridded_lbound=1, ungridded_ubound=ncat) ! from ice state field: trcrn
    call fldlist_add(fldsFrIce_num , fldsFrIce, 'sstfrz')
 
    write (tmpString, *) ncat
@@ -2192,9 +2188,9 @@ contains
    allocate(pndtn_scaled(nx_block,ny_block,ncat,nblocks))
    
    do n = 1, ncat
-      call state_setexport(exportState, 'ia_aicen', input=aicen , lmask=tmask, ifrac=ailohi, rc=rc, index=n, ungridded_index=n)
-      call state_setexport(exportState, 'ia_snown', input=vsnon , lmask=tmask, ifrac=ailohi, rc=rc, index=n, ungridded_index=n)
-      call state_setexport(exportState, 'ia_thikn', input=vicen , lmask=tmask, ifrac=ailohi, rc=rc, index=n, ungridded_index=n)
+      call state_setexport(exportState, 'Si_ifrac_n', input=aicen , lmask=tmask, ifrac=ailohi, rc=rc, index=n, ungridded_index=n)
+      call state_setexport(exportState, 'Si_vsno_n', input=vsnon , lmask=tmask, ifrac=ailohi, rc=rc, index=n, ungridded_index=n)
+      call state_setexport(exportState, 'Si_vice_n', input=vicen , lmask=tmask, ifrac=ailohi, rc=rc, index=n, ungridded_index=n)
    end do
 
    call state_setexport(exportState, 'sstfrz', input=Tf , lmask=tmask, ifrac=ailohi, rc=rc)
@@ -2206,8 +2202,8 @@ contains
    pndtn_scaled(:,:,:,:) = trcrn(:,:,nt_hpnd,:,:) * apeffn(:,:,:,:) * aicen(:,:,:,:)
 
    do n = 1, ncat
-      call state_setexport(exportState, 'ia_pndfn', input=pndfn_scaled, lmask=tmask, ifrac=ailohi, rc=rc, index=n, ungridded_index=n)
-      call state_setexport(exportState, 'ia_pndtn', input=pndtn_scaled, lmask=tmask, ifrac=ailohi, rc=rc, index=n, ungridded_index=n)
+      call state_setexport(exportState, 'Si_pndf_n', input=pndfn_scaled, lmask=tmask, ifrac=ailohi, rc=rc, index=n, ungridded_index=n)
+      call state_setexport(exportState, 'Si_pndt_n', input=pndtn_scaled, lmask=tmask, ifrac=ailohi, rc=rc, index=n, ungridded_index=n)
    end do
 
    rnslyr = real(nslyr,kind=dbl_kind)      
@@ -2252,60 +2248,12 @@ contains
          end do
       end do
    end do
-   call state_setexport(exportState, 'ia_itopt', input=tempfld, lmask=tmask, ifrac=ailohi, rc=rc, ungridded_index=n)
-   call state_setexport(exportState, 'ia_itopk', input=tempfld1, lmask=tmask, ifrac=ailohi, rc=rc, ungridded_index=n)
+   call state_setexport(exportState, 'Si_topt', input=tempfld, lmask=tmask, ifrac=ailohi, rc=rc, ungridded_index=n)
+   call state_setexport(exportState, 'Si_topk', input=tempfld1, lmask=tmask, ifrac=ailohi, rc=rc, ungridded_index=n)
    end do
-   
-   call state_getfldptr(importState, 'um_icenth', um_icenth, rc)
-   call state_getfldptr(importState, 'um_icesth', um_icesth, rc)
 
    call state_getfldptr(exportState, 'Fioi_melth', fhocn_ptr, rc)
    call state_getfldptr(exportState, 'Fioi_meltw', fresh_ptr, rc)
-   
-   ! n = 0
-   ! do iblk = 1, nblocks
-   !    this_block = get_block(blocks_ice(iblk),iblk)
-   !    ilo = this_block%ilo
-   !    ihi = this_block%ihi
-   !    jlo = this_block%jlo
-   !    jhi = this_block%jhi
-   !    do j = jlo, jhi
-   !       do i = ilo, ihi
-   !          n = n + 1
-
-   !          if (tmask(i,j,iblk)) then
-
-   !             if (lice_nth(i,j,iblk) == 0.0) then
-   !                lice_nth(i,j,iblk) = um_icenth(n)
-   !             end if
-
-   !             if (lice_sth(i,j,iblk) == 0.0) then
-   !                lice_sth(i,j,iblk) = um_icesth(n)
-   !             end if
-
-   !             if (amsk_nth(i,j,iblk) > 0.0) then
-   !                licefw = max(0.0, um_icenth(n) - lice_nth(i,j,iblk)) * msk_nth(i,j,iblk) / amsk_nth(i,j,iblk) 
-   !             else if (amsk_sth(i,j,iblk) > 0.0) then
-   !                licefw = max(0.0, um_icesth(n) - lice_sth(i,j,iblk)) * msk_sth(i,j,iblk) / amsk_sth(i,j,iblk)
-   !             else
-   !                licefw = 0.0
-   !             end if
-               
-   !             licefw = licefw / cpl_dt
-
-   !             liceht = -licefw * Lfresh
-               
-   !             ! fresh_ptr(n) = fresh_ptr(n) + licefw
-   !             ! fhocn_ptr(n) = fhocn_ptr(n) + liceht
-
-   !             lice_nth(i,j,iblk) = um_icenth(n)
-   !             lice_sth(i,j,iblk) = um_icesth(n)
-
-   !          end if
-
-   !       end do
-   !    end do
-   ! end do
 
   end subroutine ice_export_access
 
@@ -2349,46 +2297,5 @@ contains
    ki = max (ki, kimin) 
 
    end function calculate_ki_from_Tin
-
-   subroutine get_lice_discharge_masks_or_iceberg(fname)
-
-      ! Called at beginning of each run trunk to read in land ice discharge mask or iceberg
-      ! (off Antarctica and Greenland).
-      
-      implicit none
-      
-      character(len=*), intent(in) :: fname
-      character*80 :: myvar = 'ficeberg'
-      integer(kind=int_kind) :: ncid_i2o, im, k
-      logical :: dbug
-      !!!
-      !character(:), allocatable :: fname_trim
-      !!!
-
-      allocate (lice_nth(nx_block,ny_block,max_blocks)); lice_nth(:,:,:) = 0
-      allocate (lice_sth(nx_block,ny_block,max_blocks)); lice_sth(:,:,:) = 0
-      allocate (msk_nth(nx_block,ny_block,max_blocks));  msk_nth(:,:,:) = 0
-      allocate (msk_sth(nx_block,ny_block,max_blocks));  msk_sth(:,:,:) = 0
-      allocate (amsk_nth(nx_block,ny_block,max_blocks)); amsk_nth(:,:,:) = 0
-      allocate (amsk_sth(nx_block,ny_block,max_blocks)); amsk_sth(:,:,:) = 0
-      
-      dbug = .true.
-      
-      !!!
-      !fname_trim = trim(fname)
-      !!!
-      if (my_task == 0) write(*,'(a,a)'),'BBB1: opening file ',fname
-      if (my_task == 0) write(*,'(a,a)'),'BBB2: opening file ',trim(fname)
-      
-      call ice_open_nc(trim(fname), ncid_i2o)
-
-      call ice_read_nc(ncid_i2o, 1, 'msk_nth',    msk_nth,   dbug)
-      call ice_read_nc(ncid_i2o, 1, 'msk_sth',    msk_sth,   dbug)
-      call ice_read_nc(ncid_i2o, 1, 'amsk_nth',   amsk_nth,  dbug)
-      call ice_read_nc(ncid_i2o, 1, 'amsk_sth',   amsk_sth,  dbug)
-      
-      
-      return
-   end subroutine get_lice_discharge_masks_or_iceberg
 
 end module ice_import_export
