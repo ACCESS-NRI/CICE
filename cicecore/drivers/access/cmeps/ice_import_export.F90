@@ -193,11 +193,6 @@ contains
     call fldlist_add(fldsToIce_num, fldsToIce, 'Sa_shum'    )
     call fldlist_add(fldsToIce_num, fldsToIce, 'Sa_tbot'    )
     call fldlist_add(fldsToIce_num, fldsToIce, 'Sa_pbot'    )
-    call fldlist_add(fldsToIce_num, fldsToIce, 'Faxa_swvdr' )
-    call fldlist_add(fldsToIce_num, fldsToIce, 'Faxa_swvdf' )
-    call fldlist_add(fldsToIce_num, fldsToIce, 'Faxa_swndr' )
-    call fldlist_add(fldsToIce_num, fldsToIce, 'Faxa_swndf' )
-    call fldlist_add(fldsToIce_num, fldsToIce, 'Faxa_lwdn'  )
     call fldlist_add(fldsToIce_num, fldsToIce, 'Faxa_rain'  )
     call fldlist_add(fldsToIce_num, fldsToIce, 'Faxa_snow'  )
     call fldlist_add(fldsToIce_num, fldsToIce, 'Sa_ptem'    ) !cesm
@@ -549,26 +544,6 @@ contains
     if (ChkErr(rc,__LINE__,u_FILE_u)) return
 
     ! import atm fluxes
-
-    call state_getimport(importState, 'Faxa_swvdr', output=aflds, index=10, &
-         areacor=med2mod_areacor, rc=rc)
-    if (ChkErr(rc,__LINE__,u_FILE_u)) return
-
-    call state_getimport(importState, 'Faxa_swndr', output=aflds, index=11, &
-         areacor=med2mod_areacor, rc=rc)
-    if (ChkErr(rc,__LINE__,u_FILE_u)) return
-
-    call state_getimport(importState, 'Faxa_swvdf', output=aflds, index=12, &
-         areacor=med2mod_areacor, rc=rc)
-    if (ChkErr(rc,__LINE__,u_FILE_u)) return
-
-    call state_getimport(importState, 'Faxa_swndf', output=aflds, index=13, &
-         areacor=med2mod_areacor, rc=rc)
-    if (ChkErr(rc,__LINE__,u_FILE_u)) return
-
-    call state_getimport(importState, 'Faxa_lwdn', output=aflds, index=14, &
-         areacor=med2mod_areacor, rc=rc)
-    if (ChkErr(rc,__LINE__,u_FILE_u)) return
 
     call state_getimport(importState, 'Faxa_rain', output=aflds, index=15, &
          areacor=med2mod_areacor, rc=rc)
@@ -2135,7 +2110,7 @@ contains
    call fldlist_add(fldsFrIce_num , fldsFrIce, 'Si_topk', ungridded_lbound=1, ungridded_ubound=ncat) ! from ice flux: keffn_top
    call fldlist_add(fldsFrIce_num , fldsFrIce, 'Si_pndf_n', ungridded_lbound=1, ungridded_ubound=ncat) ! from icepack_shorwave: apeffn
    call fldlist_add(fldsFrIce_num , fldsFrIce, 'Si_pndt_n', ungridded_lbound=1, ungridded_ubound=ncat) ! from ice state field: trcrn
-   call fldlist_add(fldsFrIce_num , fldsFrIce, 'sstfrz')
+   call fldlist_add(fldsFrIce_num , fldsFrIce, 'Si_Tf')
 
    write (tmpString, *) ncat
    call ESMF_LogWrite("CICE number of ice categories: " // trim(tmpString))
@@ -2193,7 +2168,7 @@ contains
       call state_setexport(exportState, 'Si_vice_n', input=vicen , lmask=tmask, ifrac=ailohi, rc=rc, index=n, ungridded_index=n)
    end do
 
-   call state_setexport(exportState, 'sstfrz', input=Tf , lmask=tmask, ifrac=ailohi, rc=rc)
+   call state_setexport(exportState, 'Si_Tf', input=Tf , lmask=tmask, ifrac=ailohi, rc=rc)
 
    ! To conserve pond areas, scale by ice fractions before mapping. Unscale in the atmosphere after mapping
    pndfn_scaled(:,:,:,:) = apeffn(:,:,:,:) * aicen(:,:,:,:)
