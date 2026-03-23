@@ -624,7 +624,7 @@
          if (icepack_warnings_aborted()) then
             write(nu_diag,*) "iglob, jglob= ", this_block%i_glob(i), ", ", this_block%j_glob(j)
             !call abort_ice(error_message=subname, &
-            file=__FILE__, line=__LINE__)
+            !file=__FILE__, line=__LINE__)
             !force CICE to try and continue
             ! write(nu_diag,*) "icepack tries to abort, but try to continue"
             call icepack_warnings_setabort(.false.)
