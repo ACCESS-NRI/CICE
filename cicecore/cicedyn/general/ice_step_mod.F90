@@ -22,7 +22,7 @@
       use ice_domain_size, only: max_blocks
       use ice_exit, only: abort_ice
       use ice_fileunits, only: nu_diag
-      use icepack_intfc, only: icepack_warnings_flush, icepack_warnings_aborted, icepack_configure
+      use icepack_intfc, only: icepack_warnings_flush, icepack_warnings_aborted, icepack_configure, icepack_warnings_setabort
       use icepack_intfc, only: icepack_prep_radiation
       use icepack_intfc, only: icepack_step_therm1
       use icepack_intfc, only: icepack_step_therm2
