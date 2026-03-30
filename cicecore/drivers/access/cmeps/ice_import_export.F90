@@ -20,8 +20,7 @@ module ice_import_export
   use ice_flux_bgc       , only : faero_atm, faero_ocn
   use ice_flux_bgc       , only : fiso_atm, fiso_ocn, fiso_evap
   use ice_flux_bgc       , only : Qa_iso, Qref_iso, HDO_ocn, H2_18O_ocn, H2_16O_ocn
-  use ice_flux           , only : fresh_ai, fsalt_ai
-  use ice_flux           , only : fresh_ai, fsalt_ai, flw, frain
+  use ice_flux           , only : fresh_ai, fsalt_ai, flw, frain, strax, stray
   use ice_flux           , only : fsnow, uocn, vocn, sst, ss_tltx, ss_tlty, frzmlt
   use ice_flux           , only : send_i2x_per_cat
   use ice_flux           , only : sss, Tf, wind, fsw
