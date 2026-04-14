@@ -625,8 +625,8 @@ contains
           do i = 1,nx_block
              uocn (i,j,iblk)   = aflds(i,j, 1,iblk)
              vocn (i,j,iblk)   = aflds(i,j, 2,iblk)
-             strax (i,j,iblk)   = aflds(i,j, 3,iblk)
-             stray (i,j,iblk)   = aflds(i,j, 4,iblk)
+             strax (i,j,iblk)   = aflds(i,j, 3,iblk) * aice(i, j, iblk)
+             stray (i,j,iblk)   = aflds(i,j, 4,iblk) * aice(i, j, iblk)
              ss_tltx(i,j,iblk) = aflds(i,j, 5,iblk)
              ss_tlty(i,j,iblk) = aflds(i,j, 6,iblk)
           enddo  !i
@@ -809,7 +809,7 @@ contains
           do i = 1, nx_block
 
              ! atmosphere
-             workx      = strax(i,j,iblk) ! wind stress, m/s
+             workx      = strax(i,j,iblk) ! wind stress
              worky      = stray(i,j,iblk)
              strax (i,j,iblk) = workx*cos(ANGLET(i,j,iblk)) & ! convert to POP grid
                              + worky*sin(ANGLET(i,j,iblk))   ! note strax and stray
