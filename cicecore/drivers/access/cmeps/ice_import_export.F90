@@ -188,8 +188,8 @@ contains
     ! from atmosphere
     call fldlist_add(fldsToIce_num, fldsToIce, 'Faxa_rain'  )
     call fldlist_add(fldsToIce_num, fldsToIce, 'Faxa_snow'  )
-    call fldlist_add(fldsToIce_num, fldsToIce, 'Faii_taux'  )
-    call fldlist_add(fldsToIce_num, fldsToIce, 'Faii_tauy'  )
+    call fldlist_add(fldsToIce_num, fldsToIce, 'Faia_taux'  )
+    call fldlist_add(fldsToIce_num, fldsToIce, 'Faia_tauy'  )
 
     ! the following are advertised but might not be connected if they are not present
     ! in the cmeps esmFldsExchange_xxx_mod.F90 that is model specific
@@ -602,9 +602,9 @@ contains
     if (ChkErr(rc,__LINE__,u_FILE_u)) return
     call state_getimport(importState, 'So_v', output=aflds, index=2, rc=rc)
     if (ChkErr(rc,__LINE__,u_FILE_u)) return
-    call state_getimport(importState, 'Faii_taux', output=aflds, index=3, rc=rc)
+    call state_getimport(importState, 'Faia_taux', output=aflds, index=3, rc=rc)
     if (ChkErr(rc,__LINE__,u_FILE_u)) return
-    call state_getimport(importState, 'Faii_tauy', output=aflds, index=4, rc=rc)
+    call state_getimport(importState, 'Faia_tauy', output=aflds, index=4, rc=rc)
     if (ChkErr(rc,__LINE__,u_FILE_u)) return
 
     call state_getimport(importState, 'So_dhdx', output=aflds, index=5, rc=rc)
