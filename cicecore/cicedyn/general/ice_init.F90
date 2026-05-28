@@ -158,6 +158,7 @@
         sw_frac, sw_dtemp, floediam, c_weld, wavefrac_min_sig_ht, &
         critical_strain, critical_probability, mean_ln_slope, var_ln_const, &
         hfrazilmin, iceruf, iceruf_ocn, &
+        sw_frac, sw_dtemp, floediam, c_weld, hfrazilmin, iceruf, iceruf_ocn, &
         rsnw_fall, rsnw_tmax, rhosnew, rhosmin, rhosmax, Tliquidus_max, &
         windmin, drhosdwind, snwlvlfac, tscale_pnd_drain, itd_area_min, itd_mass_min
 
@@ -247,6 +248,7 @@
         critical_strain, critical_probability, mean_ln_slope, var_ln_const, &
         hfrazilmin,     weld_method,    wave_dep_welding, Tliquidus_max,  &
         hi_min,                                                               &
+        floediam,       c_weld,         hfrazilmin,      Tliquidus_max,   hi_min,       &
         itd_area_min,   itd_mass_min,    tscale_pnd_drain
 
       namelist /dynamics_nml/ &
@@ -2904,6 +2906,7 @@
          critical_strain_in=critical_strain, critical_probability_in=critical_probability, &
          mean_ln_slope_in=mean_ln_slope, var_ln_const_in=var_ln_const, weld_method_in=weld_method, &
          wave_dep_welding_in=wave_dep_welding, hfrazilmin_in=hfrazilmin, Tliquidus_max_in=Tliquidus_max, &
+         floediam_in=floediam, c_weld_in=c_weld, hfrazilmin_in=hfrazilmin, Tliquidus_max_in=Tliquidus_max, &
          aspect_rapid_mode_in=aspect_rapid_mode, dSdt_slow_mode_in=dSdt_slow_mode, &
          phi_c_slow_mode_in=phi_c_slow_mode, phi_i_mushy_in=phi_i_mushy, conserv_check_in=conserv_check, &
          wave_spec_type_in = wave_spec_type, wave_spec_in=wave_spec, nfreq_in=nfreq, &
