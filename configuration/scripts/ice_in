@@ -151,6 +151,7 @@
     Tliquidus_max     = -0.1d0
     hfrazilmin        = 0.05d0
     floediam          = 300.0d0
+    c_weld            = 1.0e-6
     tscale_pnd_drain  = 10.0d0
 /
 

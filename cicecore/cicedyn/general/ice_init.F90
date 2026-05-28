@@ -155,7 +155,7 @@
         mu_rdg, hs0, dpscale, rfracmin, rfracmax, pndaspect, apnd_sl, hs1, hp1, &
         a_rapid_mode, Rac_rapid_mode, aspect_rapid_mode, dSdt_slow_mode, &
         phi_c_slow_mode, phi_i_mushy, kalg, atmiter_conv, Pstar, Cstar, &
-        sw_frac, sw_dtemp, floediam, hfrazilmin, iceruf, iceruf_ocn, &
+        sw_frac, sw_dtemp, floediam, c_weld, hfrazilmin, iceruf, iceruf_ocn, &
         rsnw_fall, rsnw_tmax, rhosnew, rhosmin, rhosmax, Tliquidus_max, &
         windmin, drhosdwind, snwlvlfac, tscale_pnd_drain, itd_area_min, itd_mass_min
 
@@ -241,7 +241,7 @@
         kitd,           ktherm,          conduct,     ksno,             &
         a_rapid_mode,   Rac_rapid_mode,  aspect_rapid_mode,             &
         dSdt_slow_mode, phi_c_slow_mode, phi_i_mushy,                   &
-        floediam,       hfrazilmin,      Tliquidus_max,   hi_min,       &
+        floediam,       c_weld,         hfrazilmin,      Tliquidus_max,   hi_min,       &
         itd_area_min,   itd_mass_min,    tscale_pnd_drain
 
       namelist /dynamics_nml/ &
@@ -636,6 +636,7 @@
       Tliquidus_max     =    0.00_dbl_kind ! maximum liquidus temperature of mush (C)
 
       floediam          =   300.0_dbl_kind ! min thickness of new frazil ice (m)
+      c_weld            = 1.0e-6_dbl_kind ! welding proportionality constant
       hfrazilmin        =    0.05_dbl_kind ! effective floe diameter (m)
 
       ! shortwave redistribution in the thermodynamics
@@ -1118,6 +1119,7 @@
       call broadcast_scalar(hp1,                  master_task)
       call broadcast_scalar(hs0,                  master_task)
       call broadcast_scalar(hs1,                  master_task)
+      call broadcast_scalar(c_weld,               master_task)
       call broadcast_scalar(dpscale,              master_task)
       call broadcast_scalar(frzpnd,               master_task)
       call broadcast_scalar(rfracmin,             master_task)
@@ -1698,6 +1700,11 @@
             write (nu_diag,*) subname//' ERROR:   Must use shortwave=dEdd or dEdd_snicar_ad'
          endif
          abort_list = trim(abort_list)//":17"
+      endif
+
+      if (c_weld < c0) then
+         if (my_task == master_task) write(nu_diag,*) subname//' ERROR: c_weld must be non-negative'
+         abort_list = trim(abort_list)//':68'
       endif
 
       if ((rfracmin < -puny .or. rfracmin > c1+puny) .or. &
@@ -2458,6 +2465,7 @@
          write(nu_diag,*) ' Floe size distribution and waves'
          write(nu_diag,*) '---------------------------------'
          write(nu_diag,1002) ' floediam         = ', floediam, ' : constant floe diameter'
+         write(nu_diag,1002) ' c_weld           = ', c_weld, ' : floe welding proportionality constant'
          if (tr_fsd) then
             if (wave_spec) then
                tmpstr2 = ' : use wave spectrum for floe size distribution'
@@ -2861,7 +2869,7 @@
          apnd_sl_in=apnd_sl, itd_area_min_in=itd_area_min, itd_mass_min_in=itd_mass_min, &
          ktherm_in=ktherm, calc_Tsfc_in=calc_Tsfc, conduct_in=conduct, semi_implicit_Tsfc_in=semi_implicit_Tsfc, &
          a_rapid_mode_in=a_rapid_mode, Rac_rapid_mode_in=Rac_rapid_mode, vapor_flux_correction_in=vapor_flux_correction, &
-         floediam_in=floediam, hfrazilmin_in=hfrazilmin, Tliquidus_max_in=Tliquidus_max, &
+         floediam_in=floediam, c_weld_in=c_weld, hfrazilmin_in=hfrazilmin, Tliquidus_max_in=Tliquidus_max, &
          aspect_rapid_mode_in=aspect_rapid_mode, dSdt_slow_mode_in=dSdt_slow_mode, &
          phi_c_slow_mode_in=phi_c_slow_mode, phi_i_mushy_in=phi_i_mushy, conserv_check_in=conserv_check, &
          wave_spec_type_in = wave_spec_type, wave_spec_in=wave_spec, nfreq_in=nfreq, &
