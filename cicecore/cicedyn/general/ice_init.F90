@@ -2477,6 +2477,8 @@
                elseif (trim(wave_spec_type) == 'random') then
                   tmpstr2 = ' : wave spectrum data file provided, sea surface height generated using '// &
                             'random number (multiple iterations of wave fracture to convergence)'
+               elseif (trim(wave_spec_type) == 'icdr') then
+                  tmpstr2 = ' : wave spectrum data provided, lognormal wave fracture'
                else
                   tmpstr2 = ' : unknown value'
                endif
