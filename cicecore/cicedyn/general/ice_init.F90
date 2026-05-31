@@ -164,10 +164,10 @@
 
       character (len=char_len) :: shortwave, albedo_type, conduct, fbot_xfer_type, &
         tfrz_option, saltflux_option, frzpnd, atmbndy, wave_spec_type, wave_height_type, &
-        snwredist, snw_aging_table, &
+        weld_method, snwredist, snw_aging_table, &
         congel_freeze, capping_method, snw_ssp_table
 
-      logical (kind=log_kind) :: calc_Tsfc, formdrag, highfreq, calc_strair, wave_spec, &
+      logical (kind=log_kind) :: calc_Tsfc, formdrag, highfreq, calc_strair, wave_spec, wave_dep_welding, &
         sw_redist, calc_dragio, use_smliq_pnd, snwgrain, semi_implicit_Tsfc, vapor_flux_correction
 
       logical (kind=log_kind) :: tr_iage, tr_FY, tr_lvl, tr_pond
@@ -241,7 +241,8 @@
         kitd,           ktherm,          conduct,     ksno,             &
         a_rapid_mode,   Rac_rapid_mode,  aspect_rapid_mode,             &
         dSdt_slow_mode, phi_c_slow_mode, phi_i_mushy,                   &
-        floediam,       c_weld,         hfrazilmin,      Tliquidus_max,   hi_min,       &
+        floediam,       c_weld,         hfrazilmin,      weld_method,     &
+        wave_dep_welding, Tliquidus_max,   hi_min,       &
         itd_area_min,   itd_mass_min,    tscale_pnd_drain
 
       namelist /dynamics_nml/ &
@@ -637,6 +638,8 @@
 
       floediam          =   300.0_dbl_kind ! min thickness of new frazil ice (m)
       c_weld            = 1.0e-6_dbl_kind ! welding proportionality constant
+      weld_method       = 'multiplicative'
+      wave_dep_welding  = .false.
       hfrazilmin        =    0.05_dbl_kind ! effective floe diameter (m)
 
       ! shortwave redistribution in the thermodynamics
@@ -1120,6 +1123,8 @@
       call broadcast_scalar(hs0,                  master_task)
       call broadcast_scalar(hs1,                  master_task)
       call broadcast_scalar(c_weld,               master_task)
+      call broadcast_scalar(weld_method,          master_task)
+      call broadcast_scalar(wave_dep_welding,     master_task)
       call broadcast_scalar(dpscale,              master_task)
       call broadcast_scalar(frzpnd,               master_task)
       call broadcast_scalar(rfracmin,             master_task)
@@ -2466,6 +2471,8 @@
          write(nu_diag,*) '---------------------------------'
          write(nu_diag,1002) ' floediam         = ', floediam, ' : constant floe diameter'
          write(nu_diag,1002) ' c_weld           = ', c_weld, ' : floe welding proportionality constant'
+         write(nu_diag,1011) ' weld_method      = ', trim(weld_method), ' : floe welding method'
+         write(nu_diag,1010) ' wave_dep_welding = ', wave_dep_welding
          if (tr_fsd) then
             if (wave_spec) then
                tmpstr2 = ' : use wave spectrum for floe size distribution'
@@ -2869,7 +2876,8 @@
          apnd_sl_in=apnd_sl, itd_area_min_in=itd_area_min, itd_mass_min_in=itd_mass_min, &
          ktherm_in=ktherm, calc_Tsfc_in=calc_Tsfc, conduct_in=conduct, semi_implicit_Tsfc_in=semi_implicit_Tsfc, &
          a_rapid_mode_in=a_rapid_mode, Rac_rapid_mode_in=Rac_rapid_mode, vapor_flux_correction_in=vapor_flux_correction, &
-         floediam_in=floediam, c_weld_in=c_weld, hfrazilmin_in=hfrazilmin, Tliquidus_max_in=Tliquidus_max, &
+         floediam_in=floediam, c_weld_in=c_weld, weld_method_in=weld_method, &
+         wave_dep_welding_in=wave_dep_welding, hfrazilmin_in=hfrazilmin, Tliquidus_max_in=Tliquidus_max, &
          aspect_rapid_mode_in=aspect_rapid_mode, dSdt_slow_mode_in=dSdt_slow_mode, &
          phi_c_slow_mode_in=phi_c_slow_mode, phi_i_mushy_in=phi_i_mushy, conserv_check_in=conserv_check, &
          wave_spec_type_in = wave_spec_type, wave_spec_in=wave_spec, nfreq_in=nfreq, &
