@@ -249,6 +249,8 @@
         hfrazilmin,     weld_method,    wave_dep_welding, Tliquidus_max,  &
         hi_min,                                                               &
         floediam,       c_weld,         hfrazilmin,      Tliquidus_max,   hi_min,       &
+        floediam,       c_weld,         hfrazilmin,      weld_method,     &
+        wave_dep_welding, Tliquidus_max,   hi_min,       &
         itd_area_min,   itd_mass_min,    tscale_pnd_drain
 
       namelist /dynamics_nml/ &
@@ -2499,6 +2501,8 @@
          write(nu_diag,1003) ' var_ln_const     = ', var_ln_const, ' : lognormal variance'
          write(nu_diag,1030) ' weld_method      = ', trim(weld_method), ' : floe welding method'
          write(nu_diag,1010) ' wave_dep_welding = ', wave_dep_welding, ' : use wave-limited welding'
+         write(nu_diag,1011) ' weld_method      = ', trim(weld_method), ' : floe welding method'
+         write(nu_diag,1010) ' wave_dep_welding = ', wave_dep_welding
          if (tr_fsd) then
             if (wave_spec) then
                tmpstr2 = ' : use wave spectrum for floe size distribution'
@@ -2907,6 +2911,8 @@
          mean_ln_slope_in=mean_ln_slope, var_ln_const_in=var_ln_const, weld_method_in=weld_method, &
          wave_dep_welding_in=wave_dep_welding, hfrazilmin_in=hfrazilmin, Tliquidus_max_in=Tliquidus_max, &
          floediam_in=floediam, c_weld_in=c_weld, hfrazilmin_in=hfrazilmin, Tliquidus_max_in=Tliquidus_max, &
+         floediam_in=floediam, c_weld_in=c_weld, weld_method_in=weld_method, &
+         wave_dep_welding_in=wave_dep_welding, hfrazilmin_in=hfrazilmin, Tliquidus_max_in=Tliquidus_max, &
          aspect_rapid_mode_in=aspect_rapid_mode, dSdt_slow_mode_in=dSdt_slow_mode, &
          phi_c_slow_mode_in=phi_c_slow_mode, phi_i_mushy_in=phi_i_mushy, conserv_check_in=conserv_check, &
          wave_spec_type_in = wave_spec_type, wave_spec_in=wave_spec, nfreq_in=nfreq, &
