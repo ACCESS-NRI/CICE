@@ -2471,8 +2471,8 @@
          write(nu_diag,*) '---------------------------------'
          write(nu_diag,1002) ' floediam         = ', floediam, ' : constant floe diameter'
          write(nu_diag,1002) ' c_weld           = ', c_weld, ' : floe welding proportionality constant'
-         write(nu_diag,1011) ' weld_method      = ', trim(weld_method), ' : floe welding method'
-         write(nu_diag,1010) ' wave_dep_welding = ', wave_dep_welding
+         write(nu_diag,1030) ' weld_method      = ', trim(weld_method), ' : floe welding method'
+         write(nu_diag,1010) ' wave_dep_welding = ', wave_dep_welding, ' : use wave-limited welding'
          if (tr_fsd) then
             if (wave_spec) then
                tmpstr2 = ' : use wave spectrum for floe size distribution'
