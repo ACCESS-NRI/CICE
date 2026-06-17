@@ -1,0 +1,6 @@
+grid_format = 'mom_nc'
+grid_file   = 'ICE_MACHINE_INPUTDATA/CICE_data/grid/a025/ocean_hgrid_a025.nc'
+kmt_file    = 'ICE_MACHINE_INPUTDATA/CICE_data/grid/a025/kmt_a025.nc'
+dt = 900
+fyear_init = 1990
+year_init      = 1900
