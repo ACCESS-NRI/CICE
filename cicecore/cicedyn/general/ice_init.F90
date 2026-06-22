@@ -155,7 +155,9 @@
         mu_rdg, hs0, dpscale, rfracmin, rfracmax, pndaspect, apnd_sl, hs1, hp1, &
         a_rapid_mode, Rac_rapid_mode, aspect_rapid_mode, dSdt_slow_mode, &
         phi_c_slow_mode, phi_i_mushy, kalg, atmiter_conv, Pstar, Cstar, &
-        sw_frac, sw_dtemp, floediam, c_weld, hfrazilmin, iceruf, iceruf_ocn, &
+        sw_frac, sw_dtemp, floediam, c_weld, wavefrac_min_sig_ht, &
+        critical_strain, critical_probability, mean_ln_slope, var_ln_const, &
+        hfrazilmin, iceruf, iceruf_ocn, &
         rsnw_fall, rsnw_tmax, rhosnew, rhosmin, rhosmax, Tliquidus_max, &
         windmin, drhosdwind, snwlvlfac, tscale_pnd_drain, itd_area_min, itd_mass_min
 
@@ -241,8 +243,10 @@
         kitd,           ktherm,          conduct,     ksno,             &
         a_rapid_mode,   Rac_rapid_mode,  aspect_rapid_mode,             &
         dSdt_slow_mode, phi_c_slow_mode, phi_i_mushy,                   &
-        floediam,       c_weld,         hfrazilmin,      weld_method,     &
-        wave_dep_welding, Tliquidus_max,   hi_min,       &
+        floediam,       c_weld,         wavefrac_min_sig_ht,              &
+        critical_strain, critical_probability, mean_ln_slope, var_ln_const, &
+        hfrazilmin,     weld_method,    wave_dep_welding, Tliquidus_max,  &
+        hi_min,                                                               &
         itd_area_min,   itd_mass_min,    tscale_pnd_drain
 
       namelist /dynamics_nml/ &
@@ -638,6 +642,11 @@
 
       floediam          =   300.0_dbl_kind ! min thickness of new frazil ice (m)
       c_weld            = 1.0e-6_dbl_kind ! welding proportionality constant
+      wavefrac_min_sig_ht  = 0.001_dbl_kind ! minimum wave height for wave fracture (m)
+      critical_strain      = 4.99e-5_dbl_kind ! critical strain threshold
+      critical_probability = 0.37_dbl_kind ! breaking probability threshold
+      mean_ln_slope        = 0.5_dbl_kind ! fitted slope of lognormal mean
+      var_ln_const         = 14.020389_dbl_kind ! fitted lognormal variance (m^2)
       weld_method       = 'multiplicative'
       wave_dep_welding  = .false.
       hfrazilmin        =    0.05_dbl_kind ! effective floe diameter (m)
@@ -1123,6 +1132,11 @@
       call broadcast_scalar(hs0,                  master_task)
       call broadcast_scalar(hs1,                  master_task)
       call broadcast_scalar(c_weld,               master_task)
+      call broadcast_scalar(wavefrac_min_sig_ht,  master_task)
+      call broadcast_scalar(critical_strain,      master_task)
+      call broadcast_scalar(critical_probability, master_task)
+      call broadcast_scalar(mean_ln_slope,        master_task)
+      call broadcast_scalar(var_ln_const,         master_task)
       call broadcast_scalar(weld_method,          master_task)
       call broadcast_scalar(wave_dep_welding,     master_task)
       call broadcast_scalar(dpscale,              master_task)
@@ -1710,6 +1724,11 @@
       if (c_weld < c0) then
          if (my_task == master_task) write(nu_diag,*) subname//' ERROR: c_weld must be non-negative'
          abort_list = trim(abort_list)//':68'
+      endif
+
+      if (wavefrac_min_sig_ht < c0) then
+         if (my_task == master_task) write(nu_diag,*) subname//' ERROR: wavefrac_min_sig_ht must be non-negative'
+         abort_list = trim(abort_list)//':69'
       endif
 
       if ((rfracmin < -puny .or. rfracmin > c1+puny) .or. &
@@ -2471,6 +2490,11 @@
          write(nu_diag,*) '---------------------------------'
          write(nu_diag,1002) ' floediam         = ', floediam, ' : constant floe diameter'
          write(nu_diag,1002) ' c_weld           = ', c_weld, ' : floe welding proportionality constant'
+         write(nu_diag,1003) ' wavefrac_min_sig_ht= ', wavefrac_min_sig_ht, ' : minimum fracture wave height'
+         write(nu_diag,1003) ' critical_strain  = ', critical_strain, ' : wave fracture strain threshold'
+         write(nu_diag,1003) ' critical_prob    = ', critical_probability, ' : wave fracture probability threshold'
+         write(nu_diag,1003) ' mean_ln_slope    = ', mean_ln_slope, ' : lognormal mean slope'
+         write(nu_diag,1003) ' var_ln_const     = ', var_ln_const, ' : lognormal variance'
          write(nu_diag,1030) ' weld_method      = ', trim(weld_method), ' : floe welding method'
          write(nu_diag,1010) ' wave_dep_welding = ', wave_dep_welding, ' : use wave-limited welding'
          if (tr_fsd) then
@@ -2876,7 +2900,9 @@
          apnd_sl_in=apnd_sl, itd_area_min_in=itd_area_min, itd_mass_min_in=itd_mass_min, &
          ktherm_in=ktherm, calc_Tsfc_in=calc_Tsfc, conduct_in=conduct, semi_implicit_Tsfc_in=semi_implicit_Tsfc, &
          a_rapid_mode_in=a_rapid_mode, Rac_rapid_mode_in=Rac_rapid_mode, vapor_flux_correction_in=vapor_flux_correction, &
-         floediam_in=floediam, c_weld_in=c_weld, weld_method_in=weld_method, &
+         floediam_in=floediam, c_weld_in=c_weld, wavefrac_min_sig_ht_in=wavefrac_min_sig_ht, &
+         critical_strain_in=critical_strain, critical_probability_in=critical_probability, &
+         mean_ln_slope_in=mean_ln_slope, var_ln_const_in=var_ln_const, weld_method_in=weld_method, &
          wave_dep_welding_in=wave_dep_welding, hfrazilmin_in=hfrazilmin, Tliquidus_max_in=Tliquidus_max, &
          aspect_rapid_mode_in=aspect_rapid_mode, dSdt_slow_mode_in=dSdt_slow_mode, &
          phi_c_slow_mode_in=phi_c_slow_mode, phi_i_mushy_in=phi_i_mushy, conserv_check_in=conserv_check, &
