@@ -936,8 +936,10 @@ contains
              tauya(i,j,iblk) = worky*cos(ANGLET(i,j,iblk)) + workx*sin(ANGLET(i,j,iblk))
 
              ! ice/ocean stress (on POP T-grid:  convert to lat-lon)
-             workx = -strocnxT_iavg(i,j,iblk)                       ! N/m^2
-             worky = -strocnyT_iavg(i,j,iblk)                       ! N/m^2
+            !  workx = -strocnxT_iavg(i,j,iblk)                       ! N/m^2
+            !  worky = -strocnyT_iavg(i,j,iblk)                       ! N/m^2
+             workx = 1.0_dbl_kind
+             worky = 0.0_dbl_kind
              tauxo(i,j,iblk) = workx*cos(ANGLET(i,j,iblk)) - worky*sin(ANGLET(i,j,iblk))
              tauyo(i,j,iblk) = worky*cos(ANGLET(i,j,iblk)) + workx*sin(ANGLET(i,j,iblk))
           enddo
