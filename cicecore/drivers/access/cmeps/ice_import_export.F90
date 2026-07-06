@@ -391,6 +391,7 @@ contains
              do i = ilo, ihi
                 n = n+1
                 model_areas(n) = tarea(i,j,iblk)/(radius*radius)
+                write(nu_diag,'(A,4g23.15)') "(tlat, tlon, mesh_area, model_area): ", tlat(i,j,iblk), tlon(i,j,iblk), mesh_areas(n), model_areas(n)
                 mod2med_areacor(n) = model_areas(n) / mesh_areas(n)
                 med2mod_areacor(n) = mesh_areas(n) / model_areas(n)
              enddo
