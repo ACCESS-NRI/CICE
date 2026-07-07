@@ -1629,19 +1629,10 @@
                   G_E(i,ny_global+1) = 2 * G_E(i, ny_global) - G_E(i, ny_global-1)
                enddo
          end select
-
-         do i = 1, nx_global+1
-            do j = 1, ny_global + 1
-                if (G_T(i,j) /= G_T(i,j)) then
-                    write(msgString, '(A,2I6,g23.15)') "(i,j,G_T): ", i, j, G_T
-                    write(nu_diag, *) trim(msgString)
-                    call abort_ice(error_message=trim(msgString), &
-        file=__FILE__, line=__LINE__)
-                endif
-
-            enddo
-         enddo
-
+        
+         write(msgString, '(A,g23.15)') "(G_T at nx_global+1,ny_global+1): ", G_T(nx_global+1,ny_global+1)
+         write(nu_diag, *) msgString
+         G_T = G_T * c180
       endif
 
       end subroutine mom_corners_global
