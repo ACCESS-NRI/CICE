@@ -322,6 +322,7 @@ contains
     real(dbl_kind)              :: max_med2mod_areacor_glob
     real(dbl_kind)              :: min_mod2med_areacor_glob
     real(dbl_kind)              :: min_med2mod_areacor_glob
+    character(len=1024)              :: msgString
     character(len=*), parameter :: subname='(ice_import_export:realize_fields)'
     !---------------------------------------------------------------------------
 
@@ -391,7 +392,14 @@ contains
              do i = ilo, ihi
                 n = n+1
                 model_areas(n) = tarea(i,j,iblk)/(radius*radius)
-                write(nu_diag,'(A,4g23.15)') "(tlat, tlon, mesh_area, model_area): ", tlat(i,j,iblk), tlon(i,j,iblk), mesh_areas(n), model_areas(n)
+                if ((model_areas(n)/=model_areas(n)) .or. model_areas(n) > 1) then
+                    write(msgString,'(A,4g23.15)') "MODEL_AREAS (tlat, tlon, mesh_area, model_area): ", tlat(i,j,iblk), tlon(i,j,iblk), mesh_areas(n), model_areas(n)
+                    call abort_ice(error_message=trim(msgString), file=u_FILE_u, line=__LINE__)
+                endif
+                if ((mesh_areas(n)/=mesh_areas(n)) .or. (mesh_areas(n) > 1))then
+                    write(msgString,'(A,4g23.15)') "MESH_AREAS (tlat, tlon, mesh_area, model_area): ", tlat(i,j,iblk), tlon(i,j,iblk), mesh_areas(n), model_areas(n)
+                    call abort_ice(error_message=trim(msgString), file=u_FILE_u, line=__LINE__)
+                endif
                 mod2med_areacor(n) = model_areas(n) / mesh_areas(n)
                 med2mod_areacor(n) = mesh_areas(n) / model_areas(n)
              enddo
