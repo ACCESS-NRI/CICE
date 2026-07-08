@@ -1440,6 +1440,7 @@
             G_TLAT(nx_global+1,ny_global+1)       , & !include top and right
             G_TLON(nx_global+1,ny_global+1)       , & !include left and bottom
             G_ULON(nx_global+1,ny_global+1)       , & !include top and right
+            source = 0.0_dbl_kind, &
             stat = ierr &
          )
       else
@@ -1616,10 +1617,12 @@
          enddo
          select case (trim(ns_boundary_type))
             case ('tripole')
-               do i = 1, nx_global+1
+               do i = 1, nx_global
                   G_T(i,ny_global+1) = G_T(nx_global+1-i, ny_global)
                   G_E(i,ny_global+1) = G_E(nx_global+1-i, ny_global)
                enddo
+               G_T(nx_global+1,ny_global+1) = 0.0_dbl_kind
+               G_E(nx_global+1,ny_global+1) = 0.0_dbl_kind
             case ('cyclic')
                G_T(:,ny_global+1) = G_T(:,1)
                G_E(:,ny_global+1) = G_E(:,1)
@@ -1632,7 +1635,7 @@
         
          write(msgString, '(A,g23.15)') "(G_T at nx_global+1,ny_global+1): ", G_T(nx_global+1,ny_global+1)
          write(nu_diag, *) msgString
-         G_T = G_T * c180
+
       endif
 
       end subroutine mom_corners_global
