@@ -1,20 +1,25 @@
 # Test         Grid    PEs          Sets         BFB-compare
 smoke          gx3     8x2           diag1,run5day
 smoke          gx3     4x2x25x29x4   debug,run2day,dslenderX2
+#
 unittest       gx3     1x1           helloworld
 unittest       gx3     1x1           calchk,short
 unittest       gx3     8x1           mpif08,debug
+#
 unittest       gx3     4x1x25x29x4   sumchk
 unittest       gx3     1x1x25x29x16  sumchk
 unittest       tx1     8x1           sumchk
 unittest       tx1     8x1           sumchk,bctripolet
+#
 unittest       gx3     4x1           bcstchk
 unittest       gx3     1x1           bcstchk
+#
 unittest       gx3     8x2           gridavgchk,dwblockall
 unittest       gx3     12x1          gridavgchk
 unittest       gx1     28x1          gridavgchk,dwblockall
 unittest       gx1     16x2          gridavgchk
 unittest       gbox128 8x2           gridavgchk
+#
 unittest       gbox80  4x2x10x20x13  halochk,bccyclic,debug
 unittest       gbox80  1x1x20x10     halochk,bccyclic
 unittest       gbox80  1x1x24x23x18  halochk,debug
@@ -48,6 +53,32 @@ unittest       tx1     4x2x65x45x10  halochk,dwblockall
 unittest       tx1     4x2x65x45     halochk,dwblockall
 unittest       tx1     4x2x57x43x12  halochk,dwblockall,bctripolet
 unittest       tx1     4x2x57x43     halochk,dwblockall,bctripolet
+#
+unittest       gx3     4x2           gathscatchk,debug
+unittest       gx3     4x2           gathscatchk,debug,dwblockall
+unittest       gx3     4x2x12x13     gathscatchk,debug
+unittest       gx3     1x1x12x13     gathscatchk,debug
+unittest       gbox80  4x2           gathscatchk,debug
+unittest       gbox80  4x2x15x14     gathscatchk,debug
+unittest       gbox80  1x1x15x14     gathscatchk,debug
+unittest       gbox80  4x2           gathscatchk,debug,bccyclic
+unittest       gbox80  4x2x15x14     gathscatchk,debug,bccyclic
+unittest       gbox80  1x1x15x14     gathscatchk,debug,bccyclic
+unittest       gbox80  4x2           gathscatchk,debug,bczerogradient
+unittest       gbox80  4x2x15x14     gathscatchk,debug,bczerogradient
+unittest       gbox80  1x1x15x14     gathscatchk,debug,bczerogradient
+unittest       gbox80  4x2           gathscatchk,debug,bclinearextrap
+unittest       gbox80  4x2x15x14     gathscatchk,debug,bclinearextrap
+unittest       gbox80  1x1x15x14     gathscatchk,debug,bclinearextrap
+unittest       tx1     4x2           gathscatchk,debug,bctripole
+unittest       tx1     4x2           gathscatchk,debug,bctripole,dwblockall
+unittest       tx1     4x2x50x50     gathscatchk,debug,bctripole
+unittest       tx1     1x1x50x50     gathscatchk,debug,bctripole
+unittest       tx1     4x2           gathscatchk,debug,bctripolet
+unittest       tx1     4x2           gathscatchk,debug,bctripolet,dwblockall
+unittest       tx1     4x2x50x50     gathscatchk,debug,bctripolet
+unittest       tx1     1x1x50x50     gathscatchk,debug,bctripolet
+#
 unittest       gx3     1x1           optargs
 unittest       gx3     1x1           opticep
 unittest       gx3     4x2x25x29x4   debug,run2day,dslenderX2,opticep,cmplog  smoke_gx3_4x2x25x29x4_debug_dslenderX2_run2day

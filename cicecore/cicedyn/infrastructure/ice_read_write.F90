@@ -321,10 +321,11 @@
 
       if (present(field_loc)) then
          call scatter_global(work, work_g1, master_task, distrb_info, &
-                             field_loc, field_type)
+                             field_loc, field_type, fillValue=c0)
       else
          call scatter_global(work, work_g1, master_task, distrb_info, &
-                             field_loc_noupdate, field_type_noupdate)
+                             field_loc_noupdate, field_type_noupdate, &
+                             fillValue=c0)
       endif
 
       deallocate(work_g1)
@@ -473,12 +474,12 @@
 
          if (present(field_loc)) then
             call scatter_global(work(:,:,k,:), work_g4(:,:,k), master_task, distrb_info, &
-                                field_loc, field_type)
+                                field_loc, field_type, fillValue=c0)
 
          else
 
             call scatter_global(work(:,:,k,:), work_g4(:,:,k), master_task, distrb_info, &
-                                field_loc_noupdate, field_type_noupdate)
+                                field_loc_noupdate, field_type_noupdate, fillValue=c0)
          endif
 
       enddo   !k
@@ -607,7 +608,7 @@
       subroutine ice_read_ext(nu,  nrec,  work, atype, diag, &
                           ignore_eof, hit_eof)
 
-      use ice_gather_scatter, only: scatter_global_ext
+      use ice_gather_scatter, only: scatter_global
 
       integer (kind=int_kind), intent(in) :: &
          nu            , & ! unit number
@@ -726,7 +727,7 @@
       ! NOTE: Ghost cells are always updated
       !-------------------------------------------------------------------
 
-      call scatter_global_ext(work, work_g1, master_task, distrb_info)
+      call scatter_global(work, work_g1, master_task, distrb_info, grid_ext=.true.)
 
       deallocate(work_g1)
 
@@ -786,7 +787,7 @@
          allocate(work_g1(1,1)) ! to save memory
       endif
 
-      call gather_global(work_g1, work, master_task, distrb_info, spc_val=c0)
+      call gather_global(work_g1, work, master_task, distrb_info, fillValue=c0)
 
       if (my_task == master_task) then
 
@@ -890,7 +891,7 @@
       endif
       do k = 1,nblyr+2
          call gather_global(work_g4(:,:,k), work(:,:,k,:), master_task, &
-                            distrb_info, spc_val=c0)
+                            distrb_info, fillValue=c0)
       enddo   !k
 
       if (my_task == master_task) then
@@ -949,7 +950,7 @@
 
       subroutine ice_write_ext(nu, nrec, work, atype, diag)
 
-      use ice_gather_scatter, only: gather_global_ext
+      use ice_gather_scatter, only: gather_global
 
       integer (kind=int_kind), intent(in) :: &
          nu            , & ! unit number
@@ -999,7 +1000,7 @@
          allocate(work_g1(1,1)) ! to save memory
       endif
 
-      call gather_global_ext(work_g1, work, master_task, distrb_info, spc_val=c0)
+      call gather_global(work_g1, work, master_task, distrb_info, fillValue=c0, grid_ext=.true.)
 
       if (my_task == master_task) then
 
@@ -1094,9 +1095,9 @@
 ! Adapted by Alison McLaren, Met Office from ice_read
 
       subroutine ice_read_nc_xy(fid,  nrec,  varname, work,  diag, &
-                             field_loc, field_type, restart_ext)
+                             field_loc, field_type, grid_ext)
 
-      use ice_gather_scatter, only: scatter_global, scatter_global_ext
+      use ice_gather_scatter, only: scatter_global
 
       integer (kind=int_kind), intent(in) :: &
          fid           , & ! file id
@@ -1112,7 +1113,7 @@
          work              ! output array (real, 8-byte)
 
       logical (kind=log_kind), optional, intent(in) :: &
-         restart_ext       ! if true, read extended grid
+         grid_ext          ! if true, read extended grid
 
       integer (kind=int_kind), optional, intent(in) :: &
          field_loc, &      ! location of field on staggered grid
@@ -1146,18 +1147,18 @@
 
       integer (kind=int_kind) :: lnrec       ! local value of nrec
 
-      logical (kind=log_kind) :: lrestart_ext  ! local value of restart_ext
+      logical (kind=log_kind) :: lgrid_ext   ! local value of grid_ext
 
       lnrec = nrec
 
       work = c0 ! to satisfy intent(out) attribute
 
-      lrestart_ext = .false.
-      if (present(restart_ext)) then
-         lrestart_ext = restart_ext
+      lgrid_ext = .false.
+      if (present(grid_ext)) then
+         lgrid_ext = grid_ext
       endif
 
-      if (lrestart_ext) then
+      if (lgrid_ext) then
          nx = nx_global + 2*nghost
          ny = ny_global + 2*nghost
       else
@@ -1246,15 +1247,15 @@
       ! NOTE: Ghost cells are not updated unless field_loc is present.
       !-------------------------------------------------------------------
 
-      if (lrestart_ext) then
-         call scatter_global_ext(work, work_g1, master_task, distrb_info)
+      if (lgrid_ext) then
+         call scatter_global(work, work_g1, master_task, distrb_info, grid_ext=.true.)
       else
          if (present(field_loc)) then
             call scatter_global(work, work_g1, master_task, distrb_info, &
-                                field_loc, field_type)
+                                field_loc, field_type, fillValue=c0)
          else
             call scatter_global(work, work_g1, master_task, distrb_info, &
-                                field_loc_noupdate, field_type_noupdate)
+                                field_loc_noupdate, field_type_noupdate, fillValue=c0)
          endif
       endif
 
@@ -1281,9 +1282,9 @@
 ! Adapted by David Bailey, NCAR from ice_read_nc_xy
 
       subroutine ice_read_nc_xyz(fid,  nrec,  varname, work,  diag, &
-                                 field_loc, field_type, restart_ext)
+                                 field_loc, field_type, grid_ext)
 
-      use ice_gather_scatter, only: scatter_global, scatter_global_ext
+      use ice_gather_scatter, only: scatter_global
 
       integer (kind=int_kind), intent(in) :: &
          fid           , & ! file id
@@ -1299,7 +1300,7 @@
          work              ! output array (real, 8-byte)
 
       logical (kind=log_kind), optional, intent(in) :: &
-         restart_ext       ! if true, read extended grid
+         grid_ext          ! if true, read extended grid
 
       integer (kind=int_kind), optional, intent(in) :: &
          field_loc, &      ! location of field on staggered grid
@@ -1337,16 +1338,16 @@
 
       integer (kind=int_kind) :: lnrec       ! local value of nrec
 
-      logical (kind=log_kind) :: lrestart_ext  ! local value of restart_ext
+      logical (kind=log_kind) :: lgrid_ext   ! local value of grid_ext
 
       lnrec = nrec
 
-      lrestart_ext = .false.
-      if (present(restart_ext)) then
-         lrestart_ext = restart_ext
+      lgrid_ext = .false.
+      if (present(grid_ext)) then
+         lgrid_ext = grid_ext
       endif
 
-      if (lrestart_ext) then
+      if (lgrid_ext) then
          nx = nx_global + 2*nghost
          ny = ny_global + 2*nghost
       else
@@ -1437,21 +1438,21 @@
       ! NOTE: Ghost cells are not updated unless field_loc is present.
       !-------------------------------------------------------------------
 
-      if (lrestart_ext) then
+      if (lgrid_ext) then
          do n=1,ncat
-            call scatter_global_ext(work(:,:,n,:), work_g1(:,:,n), &
-                                    master_task, distrb_info)
+            call scatter_global(work(:,:,n,:), work_g1(:,:,n), &
+                                master_task, distrb_info, grid_ext=.true.)
          enddo
       else
          if (present(field_loc)) then
             do n=1,ncat
                call scatter_global(work(:,:,n,:), work_g1(:,:,n), master_task, &
-                    distrb_info, field_loc, field_type)
+                    distrb_info, field_loc, field_type, fillValue=c0)
             enddo
          else
             do n=1,ncat
                call scatter_global(work(:,:,n,:), work_g1(:,:,n), master_task, &
-                    distrb_info, field_loc_noupdate, field_type_noupdate)
+                    distrb_info, field_loc_noupdate, field_type_noupdate, fillValue=c0)
             enddo
          endif
       endif
@@ -1478,11 +1479,11 @@
 ! by changing all occurrences of ncat to nfreq
 
       subroutine ice_read_nc_xyf(fid,  nrec,  varname, work,  diag, &
-                                 field_loc, field_type, restart_ext)
+                                 field_loc, field_type, grid_ext)
 
       use ice_fileunits, only: nu_diag
       use ice_domain_size, only: nfreq
-      use ice_gather_scatter, only: scatter_global, scatter_global_ext
+      use ice_gather_scatter, only: scatter_global
 
       integer (kind=int_kind), intent(in) :: &
          fid           , & ! file id
@@ -1498,7 +1499,7 @@
          work              ! output array (real, 8-byte)
 
       logical (kind=log_kind), optional, intent(in) :: &
-         restart_ext       ! if true, read extended grid
+         grid_ext          ! if true, read extended grid
 
       integer (kind=int_kind), optional, intent(in) :: &
          field_loc, &      ! location of field on staggered grid
@@ -1535,7 +1536,7 @@
 
       integer (kind=int_kind) :: lnrec       ! local value of nrec
 
-      logical (kind=log_kind) :: lrestart_ext  ! local value of restart_ext
+      logical (kind=log_kind) :: lgrid_ext   ! local value of grid_ext
 
       character(len=*), parameter :: subname = '(ice_read_nc_xyf)'
 
@@ -1543,12 +1544,12 @@
 
       lnrec = nrec
 
-      lrestart_ext = .false.
-      if (present(restart_ext)) then
-         lrestart_ext = restart_ext
+      lgrid_ext = .false.
+      if (present(grid_ext)) then
+         lgrid_ext = grid_ext
       endif
 
-      if (lrestart_ext) then
+      if (lgrid_ext) then
          nx = nx_global + 2*nghost
          ny = ny_global + 2*nghost
       else
@@ -1639,21 +1640,21 @@
       ! NOTE: Ghost cells are not updated unless field_loc is present.
       !-------------------------------------------------------------------
 
-      if (lrestart_ext) then
+      if (lgrid_ext) then
          do n = 1, nfreq
-            call scatter_global_ext(work(:,:,n,1,:), work_g1(:,:,n), &
-                                    master_task, distrb_info)
+            call scatter_global(work(:,:,n,1,:), work_g1(:,:,n), &
+                                master_task, distrb_info, grid_ext=.true.)
          enddo
       else
          if (present(field_loc)) then
             do n = 1, nfreq
                call scatter_global(work(:,:,n,1,:), work_g1(:,:,n), master_task, &
-                    distrb_info, field_loc, field_type)
+                    distrb_info, field_loc, field_type, fillValue=c0)
             enddo
          else
             do n = 1, nfreq
                call scatter_global(work(:,:,n,1,:), work_g1(:,:,n), master_task, &
-                    distrb_info, field_loc_noupdate, field_type_noupdate)
+                    distrb_info, field_loc_noupdate, field_type_noupdate, fillValue=c0)
             enddo
          endif
       endif
@@ -2174,9 +2175,9 @@
 ! Adapted by David Bailey, NCAR
 
       subroutine ice_write_nc_xy(fid,  nrec,  varid, work,  diag, &
-                                 restart_ext, varname)
+                                 grid_ext, varname)
 
-      use ice_gather_scatter, only: gather_global, gather_global_ext
+      use ice_gather_scatter, only: gather_global
 
       integer (kind=int_kind), intent(in) :: &
          fid           , & ! file id
@@ -2187,7 +2188,7 @@
          diag              ! if true, write diagnostic output
 
       logical (kind=log_kind), optional, intent(in) :: &
-         restart_ext       ! if true, write extended grid
+         grid_ext          ! if true, write extended grid
 
       real (kind=dbl_kind), dimension(nx_block,ny_block,max_blocks), intent(in) :: &
          work              ! output array (real, 8-byte)
@@ -2219,14 +2220,14 @@
 
       integer (kind=int_kind) :: nx, ny
 
-      logical (kind=log_kind) :: lrestart_ext  ! local value of restart_ext
+      logical (kind=log_kind) :: lgrid_ext  ! local value of grid_ext
 
-      lrestart_ext = .false.
-      if (present(restart_ext)) then
-         lrestart_ext = restart_ext
+      lgrid_ext = .false.
+      if (present(grid_ext)) then
+         lgrid_ext = grid_ext
       endif
 
-      if (lrestart_ext) then
+      if (lgrid_ext) then
          nx = nx_global + 2*nghost
          ny = ny_global + 2*nghost
       else
@@ -2246,11 +2247,11 @@
          allocate(work_g1(1,1))   ! to save memory
       endif
 
-      if (lrestart_ext) then
-         call gather_global_ext(work_g1, work, master_task, distrb_info, spc_val=c0)
-      else
-         call gather_global(work_g1, work, master_task, distrb_info, spc_val=c0)
-      endif
+!tcx      if (lgrid_ext) then
+      call gather_global(work_g1, work, master_task, distrb_info, fillValue=c0, grid_ext=lgrid_ext)
+!      else
+!         call gather_global(work_g1, work, master_task, distrb_info, fillValue=c0)
+!      endif
 
       if (my_task == master_task) then
 
@@ -2300,9 +2301,9 @@
 ! Adapted by David Bailey, NCAR
 
       subroutine ice_write_nc_xyz(fid,  nrec,  varid, work,  diag, &
-                                  restart_ext, varname)
+                                  grid_ext, varname)
 
-      use ice_gather_scatter, only: gather_global, gather_global_ext
+      use ice_gather_scatter, only: gather_global
 
       integer (kind=int_kind), intent(in) :: &
          fid           , & ! file id
@@ -2313,7 +2314,7 @@
          diag              ! if true, write diagnostic output
 
       logical (kind=log_kind), optional, intent(in) :: &
-         restart_ext       ! if true, read extended grid
+         grid_ext          ! if true, read extended grid
 
       real (kind=dbl_kind), dimension(nx_block,ny_block,ncat,max_blocks), intent(in) :: &
          work              ! output array (real, 8-byte)
@@ -2346,14 +2347,14 @@
 
       integer (kind=int_kind) :: nx, ny
 
-      logical (kind=log_kind) :: lrestart_ext  ! local value of restart_ext
+      logical (kind=log_kind) :: lgrid_ext  ! local value of grid_ext
 
-      lrestart_ext = .false.
-      if (present(restart_ext)) then
-         lrestart_ext = restart_ext
+      lgrid_ext = .false.
+      if (present(grid_ext)) then
+         lgrid_ext = grid_ext
       endif
 
-      if (lrestart_ext) then
+      if (lgrid_ext) then
          nx = nx_global + 2*nghost
          ny = ny_global + 2*nghost
       else
@@ -2367,17 +2368,17 @@
          allocate(work_g1(1,1,ncat))   ! to save memory
       endif
 
-      if (lrestart_ext) then
-         do n=1,ncat
-            call gather_global_ext(work_g1(:,:,n), work(:,:,n,:), &
-                 master_task, distrb_info, spc_val=c0)
-         enddo
-      else
-         do n=1,ncat
-            call gather_global(work_g1(:,:,n), work(:,:,n,:), &
-                    master_task, distrb_info, spc_val=c0)
-         enddo
-      endif
+!tcx      if (lgrid_ext) then
+      do n=1,ncat
+         call gather_global(work_g1(:,:,n), work(:,:,n,:), &
+              master_task, distrb_info, fillValue=c0, grid_ext=lgrid_ext)
+      enddo
+!      else
+!         do n=1,ncat
+!            call gather_global(work_g1(:,:,n), work(:,:,n,:), &
+!                    master_task, distrb_info, fillValue=c0)
+!         enddo
+!      endif
 
       if (present(varname)) then
          lvarname = trim(varname)
@@ -2626,9 +2627,9 @@
 ! Adapted by Elizabeth Hunke for reading 3D ocean currents
 
       subroutine ice_read_nc_uv(fid,  nrec, nzlev,  varname, work,  diag, &
-                             field_loc, field_type, restart_ext)
+                             field_loc, field_type, grid_ext)
 
-      use ice_gather_scatter, only: scatter_global, scatter_global_ext
+      use ice_gather_scatter, only: scatter_global
 
       integer (kind=int_kind), intent(in) :: &
          fid           , & ! file id
@@ -2645,7 +2646,7 @@
          work              ! output array (real, 8-byte)
 
       logical (kind=log_kind), optional, intent(in) :: &
-         restart_ext       ! if true, read extended grid
+         grid_ext          ! if true, read extended grid
 
       integer (kind=int_kind), optional, intent(in) :: &
          field_loc, &      ! location of field on staggered grid
@@ -2675,14 +2676,14 @@
 
       integer (kind=int_kind) :: nx, ny
 
-      logical (kind=log_kind) :: lrestart_ext  ! local value of restart_ext
+      logical (kind=log_kind) :: lgrid_ext  ! local value of grid_ext
 
-      lrestart_ext = .false.
-      if (present(restart_ext)) then
-         lrestart_ext = restart_ext
+      lgrid_ext = .false.
+      if (present(grid_ext)) then
+         lgrid_ext = grid_ext
       endif
 
-      if (lrestart_ext) then
+      if (lgrid_ext) then
          nx = nx_global + 2*nghost
          ny = ny_global + 2*nghost
       else
@@ -2733,15 +2734,15 @@
       ! NOTE: Ghost cells are not updated unless field_loc is present.
       !-------------------------------------------------------------------
 
-      if (lrestart_ext) then
-         call scatter_global_ext(work, work_g1, master_task, distrb_info)
+      if (lgrid_ext) then
+         call scatter_global(work, work_g1, master_task, distrb_info, grid_ext=.true.)
       else
          if (present(field_loc)) then
             call scatter_global(work, work_g1, master_task, distrb_info, &
-                                field_loc, field_type)
+                                field_loc, field_type, fillValue=c0)
          else
             call scatter_global(work, work_g1, master_task, distrb_info, &
-                                field_loc_noupdate, field_type_noupdate)
+                                field_loc_noupdate, field_type_noupdate, fillValue=c0)
          endif
       endif
 
