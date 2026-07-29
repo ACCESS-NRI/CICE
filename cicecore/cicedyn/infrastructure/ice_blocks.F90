@@ -255,36 +255,6 @@ contains
                 j_glob_data(j,n) = 0  ! padding
             endif
 
-!            !*** southern ghost cells
-!
-!            if (j_glob_data(j,n) < 1) then
-!               select case (ns_boundary_type)
-!               case ('cyclic')
-!                  j_glob_data(j,n) = j_glob_data(j,n) + ny_global
-!               case default
-!                  ! lower to upper
-!               end select
-!            endif
-!
-!            !*** padding required
-!
-!            if (j_glob_data(j,n) > ny_global + nghost) then
-!               j_glob_data(j,n) = 0   ! padding
-!
-!            !*** northern ghost cells
-!
-!            else if (j_glob_data(j,n) > ny_global) then
-!               select case (ns_boundary_type)
-!               case ('cyclic')
-!                  j_glob_data(j,n) = j_glob_data(j,n) - ny_global
-!               case ('tripole')
-!                  j_glob_data(j,n) = -j_glob_data(j,n)  ! negative
-!               case ('tripoleT')
-!                  j_glob_data(j,n) = -j_glob_data(j,n)  ! negative
-!               case default
-!                  ! lower to upper
-!               end select
-!
             !*** set last physical point if padded domain
 
             if (j_glob_data(j,n) == ny_global .and. &
@@ -304,32 +274,6 @@ contains
                 i_glob_data(i,n) = 0  ! padding
             endif
 
-!            !*** western ghost cells
-!
-!            if (i_glob_data(i,n) < 1) then
-!               select case (ew_boundary_type)
-!               case ('cyclic')
-!                  i_glob_data(i,n) = i_glob_data(i,n) + nx_global
-!               case default
-!                  ! left to right
-!               end select
-!            endif
-!
-!            !*** padded domain - fill padded region with zero
-!
-!            if (i_glob_data(i,n) > nx_global + nghost) then
-!               i_glob_data(i,n) = 0
-!
-!            !*** eastern ghost cells
-!
-!            else if (i_glob_data(i,n) > nx_global) then
-!               select case (ew_boundary_type)
-!               case ('cyclic')
-!                  i_glob_data(i,n) = i_glob_data(i,n) - nx_global
-!               case default
-!                  ! left to right
-!               end select
-!
             !*** last physical point in padded domain
 
             if (i_glob_data(i,n) == nx_global .and. &
