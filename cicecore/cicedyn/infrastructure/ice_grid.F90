@@ -1895,10 +1895,12 @@
                G_T(nx_global+1,1:ny_global) = G_T(1,1:ny_global)
                G_N(nx_global+1,:) = G_N(1,:)
             case('open')
-               do j=1, ny_global
+               do j=1, ny_global + 1
                   G_T(nx_global+1,j) = 2 * G_T(nx_global, j) - G_T(nx_global-1, j)
                   G_N(nx_global+1,j) = 2 * G_N(nx_global, j) - G_N(nx_global-1, j)
                enddo
+            case default
+               call abort_ice(subname//' ERROR: unsupported e-w bndy type - '//trim(ew_boundary_type))
          end select
 
          ! fill last row
@@ -1931,6 +1933,8 @@
                   G_T(i,ny_global+1) = 2 * G_T(i, ny_global) - G_T(i, ny_global-1)
                   G_E(i,ny_global+1) = 2 * G_E(i, ny_global) - G_E(i, ny_global-1)
                enddo
+            case default
+               call abort_ice(subname//' ERROR: unsupported n-s bndy type - '//trim(ns_boundary_type))
          end select
 
       endif
