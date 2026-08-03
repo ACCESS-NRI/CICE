@@ -1900,7 +1900,7 @@
                   G_N(nx_global+1,j) = 2 * G_N(nx_global, j) - G_N(nx_global-1, j)
                enddo
             case default
-               call abort_ice(subname//' ERROR: unsupported e-w bndy type - '//trim(ew_boundary_type))
+               call abort_ice(subname//' ERROR: unsupported e-w bndy type - '//trim(ew_boundary_type), file=__FILE__, line=__LINE__)
          end select
 
          ! fill last row
@@ -1934,7 +1934,7 @@
                   G_E(i,ny_global+1) = 2 * G_E(i, ny_global) - G_E(i, ny_global-1)
                enddo
             case default
-               call abort_ice(subname//' ERROR: unsupported n-s bndy type - '//trim(ns_boundary_type))
+               call abort_ice(subname//' ERROR: unsupported n-s bndy type - '//trim(ns_boundary_type), file=__FILE__, line=__LINE__)
          end select
 
       endif
