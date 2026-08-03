@@ -1895,15 +1895,16 @@
                G_T(nx_global+1,1:ny_global) = G_T(1,1:ny_global)
                G_N(nx_global+1,:) = G_N(1,:)
             case('open')
-               do j=1, ny_global + 1
+               do j=1, ny_global
                   G_T(nx_global+1,j) = 2 * G_T(nx_global, j) - G_T(nx_global-1, j)
                   G_N(nx_global+1,j) = 2 * G_N(nx_global, j) - G_N(nx_global-1, j)
                enddo
             case default
-               call abort_ice(subname//' ERROR: unsupported e-w bndy type - '//trim(ew_boundary_type), file=__FILE__, line=__LINE__)
+               call abort_ice(subname//' ERROR: unsupported e-w bndy type - '// &
+                  trim(ew_boundary_type), file=__FILE__, line=__LINE__)
          end select
 
-         ! fill last row
+         ! fill last row for U & N from top of mom supergrid
          im1 = 1 ; im2 = 2
          do i = 1, nx_global
             G_U(i,ny_global + 1) = work_mom(im1, 2*ny_global+1)
@@ -1911,9 +1912,16 @@
             im1 = im1 + 2
             im2 = im2 + 2
          enddo
+         ! top right corner for U,N
          G_U(nx_global + 1,ny_global + 1) = work_mom(2*nx_global + 1, 2*ny_global+1)
-         if (trim(ew_boundary_type) == 'cyclic') &
-             G_N(nx_global + 1,ny_global + 1) = G_N(1,ny_global + 1)
+         select case (trim(ew_boundary_type))
+            case('cyclic')
+               G_N(nx_global + 1,ny_global + 1) = G_N(1,ny_global + 1)
+            case('open')
+               G_N(nx_global + 1,ny_global + 1) = 2 * G_N(nx_global, ny_global + 1) - G_N(nx_global-1, ny_global + 1)
+         end select
+
+         ! fill last row for E & T using n-s boundary type
          select case (trim(ns_boundary_type))
             case ('tripole')
                G_T(1:nx_global,ny_global+1) = G_T(nx_global:1:-1, ny_global)
@@ -1934,7 +1942,8 @@
                   G_E(i,ny_global+1) = 2 * G_E(i, ny_global) - G_E(i, ny_global-1)
                enddo
             case default
-               call abort_ice(subname//' ERROR: unsupported n-s bndy type - '//trim(ns_boundary_type), file=__FILE__, line=__LINE__)
+               call abort_ice(subname//' ERROR: unsupported n-s bndy type - '// &
+                  trim(ns_boundary_type), file=__FILE__, line=__LINE__)
          end select
 
       endif
