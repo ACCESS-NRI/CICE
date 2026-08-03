@@ -34,6 +34,12 @@ unittest       gbox80  5x2x25x22x5   halochk,bclinearextrap,debug
 unittest       gbox80  1x1x22x25     halochk,bclinearextrap
 unittest       gbox80  1x1x22x21x16  halochk,bccyclicextrap,debug
 unittest       gbox80  4x2x22x21     halochk,bccyclicextrap
+unittest       gbox80  1x1x23x22x16  halochk,bcextrapcyclic,debug
+unittest       gbox80  4x2x23x22     halochk,bcextrapcyclic
+unittest       gbox80  4x2x13x23x13  halochk,bctripole,debug
+unittest       gbox80  1x1x23x13     halochk,bctripole
+unittest       gbox80  4x2x11x25x13  halochk,bctripolet,debug
+unittest       gbox80  1x1x25x11     halochk,bctripolet
 unittest       tx1     4x2x90x60x6   halochk,dwblockall
 unittest       tx1     1x1x90x60     halochk,dwblockall
 unittest       tx1     1x1x90x60x20  halochk,dwblockall,bctripolet

@@ -24,13 +24,13 @@
 
       use ice_kinds_mod
       use ice_blocks, only: block, get_block, nx_block, ny_block, nghost, &
-          nblocks_x, nblocks_y
+          nblocks_x, nblocks_y, &
+          ew_boundary_type, ns_boundary_type
       use ice_communicate, only: my_task, master_task
       use ice_constants, only: c0, c1, c2, p2, p5, c4
       use ice_domain_size, only: nx_global, ny_global, ncat, max_blocks, &
           nilyr, nslyr, nfsd, n_iso, n_aero
       use ice_domain, only: nblocks, blocks_ice, &
-          ew_boundary_type, ns_boundary_type, &
           max_set_boundary_flds, num_set_boundary_flds, set_boundary_flds
       use ice_exit, only: abort_ice
       use ice_fileunits, only: nu_diag

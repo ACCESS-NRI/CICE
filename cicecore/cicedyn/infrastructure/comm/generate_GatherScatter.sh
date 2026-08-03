@@ -489,14 +489,14 @@ cat <<EOFF > $file
       isrc, jsrc,    &! source addresses
       imin, jmin,    &! min indices for i_glob and j_glob relative to ARRAY_G
       imax, jmax,    &! max indices for i_glob and j_glob relative to ARRAY_G
-      xoffset, yoffset,   &! offsets for tripole boundary conditions
-      yoffset2,           &!
-      isign,              &! sign factor for tripole boundary conditions
-      gshift,        &! index shift from ARRAY_G indexing to i_glob, j_glob indexing
-                      ! for ext=false, there is no shift, want to scatter 1:nx_global,1:ny_global to same
-                      ! for ext=true, there is a shift of nghost, shift 1:nx_global+2*nghost,1:ny_global+2*ghnost 
-                      !   to 1-nghost:nx_global+nghost,1-nghost:ny_global+nghost
+      ioffset, joffset,   &! offsets for tripole boundary conditions
+!      yoffset2,     &!
+      isign,         &! sign factor for tripole boundary conditions
       dst_block       ! location of block in dst array
+
+   real (dbl_kind) :: &
+      val1, val2,    &! linear extrapolation corner values
+      efac            ! linear extrapolation factor
 
    type (block) :: &
       this_block      ! block info for current block
@@ -546,52 +546,26 @@ cat <<EOFF > $file
       lext = .false.
    endif
 
+   ! check size of global grid
+   if (my_task == src_task) then
+      if (lext) then
+         if (size(ARRAY_G,dim=1)/= nx_global+2*nghost .or. size(ARRAY_G,dim=2) /= ny_global+2*nghost) then
+            call abort_ice(subname//'ERROR: grid_ext = true, wrong ARRAY_G size')
+         endif
+      else
+         if (size(ARRAY_G,dim=1)/= nx_global .or. size(ARRAY_G,dim=2) /= ny_global) then
+            call abort_ice(subname//'ERROR: grid_ext = false, wrong ARRAY_G size')
+         endif
+      endif
+   endif
+
    ARRAY = lfillValue
 
-   if (.not.lext) then
-      ! may need tripole scatter
-      if (.not.present(field_loc) .or. .not.present(field_type)) then
-         call abort_ice(subname//'ERROR: grid_ext = false, must pass field_loc and field_type')
-      endif
-
-      this_block = get_block(1,1) ! for the tripoleTflag - all blocks have it
-      if (this_block%tripoleTFlag) then
-         select case (field_loc)
-         case (field_loc_center)   ! cell center location
-            xoffset = 2
-            yoffset = 0
-         case (field_loc_NEcorner) ! cell corner (velocity) location
-            xoffset = 1
-            yoffset = -1
-         case (field_loc_Eface)    ! cell face location
-            xoffset = 1
-            yoffset = 0
-         case (field_loc_Nface)    ! cell face location
-            xoffset = 2
-            yoffset = -1
-         case (field_loc_noupdate) ! ghost cells never used - use cell center
-            xoffset = 1
-            yoffset = 1
-         end select
-      else
-         select case (field_loc)
-         case (field_loc_center)   ! cell center location
-            xoffset = 1
-            yoffset = 1
-         case (field_loc_NEcorner) ! cell corner (velocity) location
-            xoffset = 0
-            yoffset = 0
-         case (field_loc_Eface)    ! cell face location
-            xoffset = 0
-            yoffset = 1
-         case (field_loc_Nface)    ! cell face location
-            xoffset = 1
-            yoffset = 0
-         case (field_loc_noupdate) ! ghost cells never used - use cell center
-            xoffset = 1
-            yoffset = 1
-         end select
-      endif
+   isign = -99
+   ioffset = -999
+   joffset = -999
+   if (.not.lext .and. &
+      (ns_boundary_type == 'tripole' .or. ns_boundary_type == 'tripoleT')) then
 
       select case (field_type)
       case (field_type_scalar)
@@ -603,7 +577,35 @@ cat <<EOFF > $file
       case (field_type_noupdate) ! ghost cells never used - use cell center
          isign =  1
       case default
-         call abort_ice(subname//'ERROR: Unknown field type in scatter')
+         call abort_ice(subname//'ERROR: Unknown field kind')
+      end select
+
+      if (ns_boundary_type == 'tripole') then
+         ioffset = 0
+         joffset = 0
+      else ! tripoleT fold
+         ioffset = -1
+         joffset = 1
+      endif
+
+      select case (field_loc)
+        case (field_loc_center)     ! cell center location
+           !ioffset = ioffset
+           !joffset = joffset
+        case (field_loc_NEcorner)   ! cell corner (velocity) location
+           ioffset = ioffset + 1
+           joffset = joffset + 1
+        case (field_loc_Eface)      ! cell east face
+           ioffset = ioffset + 1
+           !joffset = joffset
+        case (field_loc_Nface)      ! cell north face
+           !ioffset = ioffset
+           joffset = joffset + 1
+        case (field_loc_noupdate)   ! no update
+           !ioffset = ioffset
+           !joffset = joffset
+        case default
+           call abort_ice(subname//'ERROR: Unknown field location')
       end select
 
    endif ! not lext
@@ -611,8 +613,8 @@ cat <<EOFF > $file
 !-----------------------------------------------------------------------
 !
 !  if this task is the src_task, compute updated LARRAY_G which contains
-!  outer halo extended grid from ARRAY_G (extended or not), then copy data to
-!  message buffer and send to other processors. also copy local blocks
+!  outer halo extended grid from ARRAY_G (extended or not), fill outer
+!  halo in global array then scatter
 !
 !  i_global, j_global are indexed 1-nghost:n*_global+nghost
 !
@@ -630,44 +632,104 @@ cat <<EOFF > $file
          enddo
          enddo
       else
+
+         ! fill cells that can be directly copied
+
          do j = 1-nghost, ny_global+nghost
-            ! tripole
-            if (j_global(j) < 0) then
-               ! tripole is top block with j_glob < 0
-               ! for yoffset=0 or 1, yoffset2=0,0
-               ! for yoffset=-1, yoffset2=0,1, for u-rows on T-fold grid
-               do yoffset2=0,max(yoffset,0)-yoffset
-                  jsrc = ny_global + yoffset + yoffset2 + (j_global(j) + ny_global)
-                  do i = 1-nghost, nx_global+nghost
-                     if (i_global(i) /= 0) then
-                        isrc = nx_global + xoffset - i_global(i)
-                        if (isrc < 1) isrc = isrc + nx_global
-                        if (isrc > nx_global) isrc = isrc - nx_global
-                        LARRAY_G(i,j-yoffset2) = isign * LARRAY_G(isrc,jsrc)
-                     endif
-                  end do
-               end do
-            else
-               ! copies interior and cyclic
-               do i = 1-nghost, nx_global+nghost
-                  if (i_global(i) >= 1 .and. i_global(i) <= nx_global .and. &
-                      j_global(j) >= 1 .and. j_global(j) <= ny_global) then
-                     LARRAY_G(i,j) = ARRAY_G(i_global(i),j_global(j))
-                  endif
-               enddo
+         do i = 1-nghost, nx_global+nghost
+            isrc = i_global(i)
+            jsrc = j_global(j)
+            if (isrc >= 1 .and. isrc <= nx_global .and. &
+                jsrc >= 1 .and. jsrc <= ny_global) then
+               ! copy valid cell directly
+               LARRAY_G(i,j) = ARRAY_G(isrc,jsrc)
             endif
          enddo
-      endif
+         enddo
 
-!tcx
-      do j = 1,ny_global
-      do i = 1,nx_global
-         if (LARRAY_G(i,j) /= ARRAY_G(i,j)) then
-            write(6,*) subname,'tcx0 ',i,j,i_global(i),j_global(j)
-            write(6,*) subname,'tcx1 ',i,j,ARRAY_G(i,j),LARRAY_G(i,j)
+         ! fill outer halo
+         ! do north/south boundary first (partly due to tripole feature) (1:nx_global)
+         ! then do east/west including corners (1-nghost:ny_global+nghost)
+
+         if (ns_boundary_type == 'tripole' .or. ns_boundary_type == 'tripoleT') then
+            do j = ny_global, ny_global+nghost
+            ! north of active cells
+            do i = 1, nx_global
+               isrc = nx_global - i + 1 - ioffset   ! ioffset = 0 for u center, ioffset = 1 for T center
+               jsrc = ny_global - (j-ny_global) - joffset + 1  ! joffset = 0 for u center, joffset = 1 for T center
+               if (isrc < 1        ) isrc = isrc + nx_global
+               if (isrc > nx_global) isrc = isrc - nx_global
+
+               !*** for center and Eface on u-fold, and NE corner and Nface
+               !*** on T-fold, do not need to replace
+               !*** top row of physical domain, so jsrc should be greater than j
+
+               if (jsrc > j) then
+                  ! do nothing
+               elseif (jsrc == j) then
+                  ! don't average in the scatter even though halo update does
+                  ! LARRAY_G(i,j) = 0.5_dbl_kind * (ARRAY_G(i,jsrc) + isign*ARRAY_G(isrc,jsrc))
+               else
+                  ! copy
+                  LARRAY_G(i,j) = isign * ARRAY_G(isrc,jsrc)
+               endif
+            enddo
+            enddo
+         else
+            !--- bottom edge
+            do j = 1-nghost, 0
+            do i = 1, nx_global
+               if (ns_boundary_type == 'cyclic') then
+                  LARRAY_G(i,j) = ARRAY_G(i,j+ny_global)
+               elseif (ns_boundary_type == 'zero_gradient') then
+                  LARRAY_G(i,j) = ARRAY_G(i,1)
+               elseif (ns_boundary_type == 'linear_extrap') then
+                  efac = real(2-j,dbl_kind)
+                  LARRAY_G(i,j) = efac*ARRAY_G(i,1) - (efac-c1)*ARRAY_G(i,2)
+               endif
+            enddo
+            enddo
+            !--- top edge
+            do j = ny_global+1, ny_global+nghost
+            do i = 1, nx_global
+               if (ns_boundary_type == 'cyclic') then
+                  LARRAY_G(i,j) = ARRAY_G(i,j-ny_global)
+               elseif (ns_boundary_type == 'zero_gradient') then
+                  LARRAY_G(i,j) = ARRAY_G(i,ny_global)
+               elseif (ns_boundary_type == 'linear_extrap') then
+                  efac = real(j-ny_global+1,dbl_kind)
+                  LARRAY_G(i,j) = efac*ARRAY_G(i,ny_global) - (efac-c1)*ARRAY_G(i,ny_global-1)
+               endif
+            enddo
+            enddo
          endif
-      enddo
-      enddo
+
+         do j = 1-nghost, ny_global+nghost
+         !--- left edge
+         do i = 1-nghost, 0
+            if (ew_boundary_type == 'cyclic') then
+               LARRAY_G(i,j) = LARRAY_G(i+nx_global,j)
+            elseif (ew_boundary_type == 'zero_gradient') then
+               LARRAY_G(i,j) = LARRAY_G(1,j)
+            elseif (ew_boundary_type == 'linear_extrap') then
+               efac = real(2-i,dbl_kind)
+               LARRAY_G(i,j) = efac*LARRAY_G(1,j) - (efac-c1)*LARRAY_G(2,j)
+            endif
+         enddo
+         !--- right edge
+         do i = nx_global+1, nx_global+nghost
+            if (ew_boundary_type == 'cyclic') then
+               LARRAY_G(i,j) = LARRAY_G(i-nx_global,j)
+            elseif (ew_boundary_type == 'zero_gradient') then
+               LARRAY_G(i,j) = LARRAY_G(nx_global,j)
+            elseif (ew_boundary_type == 'linear_extrap') then
+               efac = real(i-nx_global+1,dbl_kind)
+               LARRAY_G(i,j) = efac*LARRAY_G(nx_global,j) - (efac-c1)*LARRAY_G(nx_global-1,j)
+            endif
+         enddo
+         enddo
+
+      endif
 
       !*** send non-local blocks away
 

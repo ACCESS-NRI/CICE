@@ -30,10 +30,11 @@
           field_loc_center, field_loc_NEcorner, field_loc_Nface, field_loc_Eface, &
           field_type_scalar, field_type_vector, field_type_angle
       use ice_communicate, only: my_task, master_task
-      use ice_blocks, only: block, get_block, nx_block, ny_block, nghost
+      use ice_blocks, only: block, get_block, nx_block, ny_block, nghost, &
+          ew_boundary_type, ns_boundary_type
       use ice_domain_size, only: nx_global, ny_global, max_blocks
       use ice_domain, only: blocks_ice, nblocks, halo_info, distrb_info, &
-          ew_boundary_type, ns_boundary_type, init_domain_distribution
+          init_domain_distribution
       use ice_fileunits, only: nu_diag, nu_grid, nu_kmt, &
           get_fileunit, release_fileunit, flush_fileunit
       use ice_gather_scatter, only: gather_global, scatter_global

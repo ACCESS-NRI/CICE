@@ -470,19 +470,18 @@
       ! NOTE: Ghost cells are not updated unless field_loc is present.
       !-------------------------------------------------------------------
 
-      do k = 1, nblyr+2
-
-         if (present(field_loc)) then
+      if (present(field_loc)) then
+         do k = 1, nblyr+2
             call scatter_global(work(:,:,k,:), work_g4(:,:,k), master_task, distrb_info, &
                                 field_loc, field_type, fillValue=c0)
-
-         else
-
+         enddo
+      else
+         do k = 1, nblyr+2
             call scatter_global(work(:,:,k,:), work_g4(:,:,k), master_task, distrb_info, &
                                 field_loc_noupdate, field_type_noupdate, fillValue=c0)
-         endif
+         enddo
+      endif
 
-      enddo   !k
       deallocate(work_g4)
 
       end subroutine ice_read_xyzt

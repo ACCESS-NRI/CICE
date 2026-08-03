@@ -1308,7 +1308,7 @@ module ice_dyn_evp1d
      ! E.g. inner_west and outer_east
      ! Till Rasmussen, DMI 2023
 
-     use ice_domain, only: ew_boundary_type, ns_boundary_type
+     use ice_blocks, only: ew_boundary_type, ns_boundary_type
      implicit none
 
      integer(kind=int_kind), intent(in) :: na0, navel0

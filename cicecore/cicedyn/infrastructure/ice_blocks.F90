@@ -11,6 +11,7 @@
 ! Oct. 2004: Adapted from POP by William H. Lipscomb, LANL
 
    use ice_kinds_mod
+   use ice_constants, only: spval_int
    use ice_domain_size, only: block_size_x, block_size_y
    use ice_fileunits, only: nu_diag
    use ice_exit, only: abort_ice
@@ -50,6 +51,10 @@
 
    integer (int_kind), public :: &! size of block domain in
       nx_block, ny_block          !  x,y dir including ghost
+
+   character (char_len), public :: &
+      ew_boundary_type,  &! type of domain bndy in each logical
+      ns_boundary_type    !    direction (ew is i, ns is j)
 
    ! predefined directions for neighbor id routine
    ! Note: the directions that are commented out are implemented in
@@ -194,25 +199,21 @@ contains
 !
 !  fill block data structures for all blocks in domain
 !  i_global/j_global should match i_glob/j_glob exactly
+!  i_global and j_global are the global i and j indices with
+!     - halo values having <1 and > nx/ny_global indices except
+!     - cyclic values imposed on halo
+!     - zero_gradient values imposed on halo
+!     - north tripole halo is negative the expected value
+!     - which means only linear_extrap values are not [1,nx/ny_global]
 !
 !----------------------------------------------------------------------
 
    do i = 1-nghost, nx_global+nghost
       i_global(i) = i
-      if (ew_boundary_type == 'cyclic') then
-         if (i_global(i) < 1)         i_global(i) = i_global(i)+nx_global
-         if (i_global(i) > nx_global) i_global(i) = i_global(i)-nx_global
-      endif
    enddo
 
    do j = 1-nghost, ny_global+nghost
       j_global(j) = j
-      if (ns_boundary_type == 'cyclic') then
-         if (j_global(j) < 1)         j_global(j) = j_global(j)+ny_global
-         if (j_global(j) > ny_global) j_global(j) = j_global(j)-ny_global
-      elseif (ns_boundary_type == 'tripole' .or. ns_boundary_type == 'tripoleT') then
-         if (j_global(j) > ny_global) j_global(j) = -j_global(j)
-      endif
    enddo
 
    n = 0
@@ -252,7 +253,7 @@ contains
             if (jindg >= 1-nghost .and. jindg <= ny_global+nghost) then
                 j_glob_data(j,n) = j_global(jindg)  ! simple lower to upper counting
             else
-                j_glob_data(j,n) = 0  ! padding
+                j_glob_data(j,n) = spval_int  ! padding
             endif
 
             !*** set last physical point if padded domain
@@ -271,7 +272,7 @@ contains
             if (iindg >= 1-nghost .and. iindg <= nx_global+nghost) then
                 i_glob_data(i,n) = i_global(iindg)  ! simple lower to upper counting
             else
-                i_glob_data(i,n) = 0  ! padding
+                i_glob_data(i,n) = spval_int  ! padding
             endif
 
             !*** last physical point in padded domain
