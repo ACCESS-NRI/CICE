@@ -22,7 +22,7 @@
       use ice_domain_size, only: max_blocks
       use ice_exit, only: abort_ice
       use ice_fileunits, only: nu_diag
-      use icepack_intfc, only: icepack_warnings_flush, icepack_warnings_aborted
+      use icepack_intfc, only: icepack_warnings_flush, icepack_warnings_aborted, icepack_configure
       use icepack_intfc, only: icepack_prep_radiation
       use icepack_intfc, only: icepack_step_therm1
       use icepack_intfc, only: icepack_step_therm2
@@ -619,6 +619,17 @@
                enddo
             enddo
          endif ! tr_aero
+
+         call icepack_warnings_flush(nu_diag)
+         if (icepack_warnings_aborted()) then
+            write(nu_diag,*) "iglob, jglob= ", this_block%i_glob(i), ", ", this_block%j_glob(j)
+            !call abort_ice(error_message=subname, &
+            !file=__FILE__, line=__LINE__)
+            !force CICE to try and continue
+            write(nu_diag,*) "icepack tries to abort, but try to continue"
+            !call icepack_warnings_setabort(.false.)
+            call icepack_configure()
+         endif
 
       enddo ! i
       enddo ! j
