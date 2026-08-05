@@ -1153,7 +1153,7 @@ contains
        jhi = this_block%jhi
        do j = jlo, jhi
           do i = ilo, ihi
-             if ( tmask(i,j,iblk) .and. ailohi(i,j,iblk) > c0 ) then
+             if ( tmask(i,j,iblk) .and. ailohi(i,j,iblk) > puny ) then
                 tempfld(i,j,iblk) = vsno(i,j,iblk)/ailohi(i,j,iblk)
              end if
           end do
