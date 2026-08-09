@@ -41,9 +41,11 @@
 
       implicit none
 
+      external :: chkresults
+
       integer(int_kind) :: nn, nl, nt, nf, i, j, k1, k2, n, ib, ie, jb, je
-      integer(int_kind) :: iblock, itrip, ioffset, joffset, isrc, jsrc
-      integer(int_kind) :: blockID, numBlocks, jtrip
+      integer(int_kind) :: iblock, ioffset, joffset, isrc, jsrc
+      integer(int_kind) :: blockID, numBlocks
       type (block) :: this_block
 
       ! fields sent to the haloupdate
@@ -71,24 +73,24 @@
       integer(int_kind), parameter :: maxfills = 2
       integer(int_kind), parameter :: nz1 = 3
       integer(int_kind), parameter :: nz2 = 4
-      real(dbl_kind)    :: aichk,ajchk,cichk,cjchk,rival,rjval,rsign
+      real(dbl_kind)    :: aichk,ajchk,cichk,cjchk,rsign
       real(dbl_kind)    :: cichk_bas,cjchk_bas,rkadd
-      real(dbl_kind)    :: fillexpected,cichk1,cichk2,cjchk1,cjchk2,wgt1,wgt2,efac
+      real(dbl_kind)    :: fillexpected,efac
       character(len=16) :: locs_name(maxlocs), types_name(maxtypes), fill_name(maxfills)
       integer(int_kind) :: field_loc(maxlocs), field_type(maxtypes)
-      logical :: halofill, found
-      integer(int_kind) :: npes, ierr, ntask, testcnt, tottest, tpcnt, tfcnt
+      logical(log_kind) :: halofill
+      integer(int_kind) :: npes, testcnt, tottest, tpcnt, tfcnt
       integer(int_kind) :: errorflag0, gflag, k1m, k2m, ptcntsum, failcntsum
       integer(int_kind), allocatable :: errorflag(:)
       integer(int_kind), allocatable :: ptcnt(:), failcnt(:)
       character(len=128), allocatable :: teststring(:)
       character(len=32) :: halofld
-      logical :: tripole_average, tripole_pole
-      logical :: first_call = .true.
+      logical(log_kind) :: tripole_average, tripole_pole
+      logical(log_kind) :: first_call = .true.
 
       ! debug points
       logical(log_kind), parameter :: debugpts = .false.
-      integer(int_kind) :: ic=1,jc=12,k1c=1,k2c=1
+      integer(int_kind) :: jc=12,k1c=1,k2c=1
 
       real(dbl_kind)   , parameter :: fillval = -88888.0_dbl_kind
       real(dbl_kind)   , parameter :: dhalofillval = -999.0_dbl_kind
@@ -846,6 +848,8 @@
                            ! leave tripole as newly computed except flip sign, STRESS only updates on tripole zipper for tripole grids
                            cichk = -cichk
                            cjchk = -cjchk
+                        ! tcraig, I think this is an error in the implementation of haloupdate_stress tripoleT,
+                        ! the redundant gridline is updated with tripoleT but not with tripole
                         !elseif (this_block%j_glob(je) == ny_global .and. j == je .and. joffset == 1) then
                         elseif ((this_block%j_glob(je) == ny_global .and. j == je) .and. &
                            ((joffset == 1 .and. ns_boundary_type == 'tripole') .or. ns_boundary_type == 'tripoleT')) then
