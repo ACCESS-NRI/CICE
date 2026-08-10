@@ -662,7 +662,7 @@
                if (jsrc > j) then
                   ! do nothing
                elseif (jsrc == j .and. i /= isrc .and. .not.(index(halofld,'STRESS') > 0)) then
-                  ! average, but don't average corner points or point if it's redundant with itself (i == isrc)
+                  ! average, but not corner points or point if it's redundant with itself (i == isrc)
                   ! or if it's a stress haloupdate
                   cidata_gl2(i,j,k1,k2) = 0.5_dbl_kind * ((cidata_glo(i,jsrc)+rkadd) + rsign*(cidata_glo(isrc,jsrc)+rkadd))
                   cjdata_gl2(i,j,k1,k2) = 0.5_dbl_kind * ((cjdata_glo(i,jsrc)+rkadd) + rsign*(cjdata_glo(isrc,jsrc)+rkadd))
@@ -771,7 +771,6 @@
                endif
 
                ! halo special cases
-               ! this has to be done after cidata_gl2 is used because they are specific values and don't want to add k1 and k2
 
                if (field_loc (nl) == field_loc_noupdate .or. &
                    field_type(nt) == field_type_noupdate) then

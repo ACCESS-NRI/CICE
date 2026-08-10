@@ -27,7 +27,7 @@ The recommended usage is described below.
   ! generate_HaloUpdate.sh first, then move forward.
   ! Do the same for generate_GatherScatter, GatherScatter_all.subr, and ice_gather_scatter.F90.
 
-  ! Now copy the current generate output.
+  ! Now copy the current output.
 
   cp haloUpdate_all.subr haloUpdate_all.subr.current
   cp GatherScatter_all.subr GatherScatter_all.subr.current
@@ -37,12 +37,12 @@ The recommended usage is described below.
   ! Modify generate_HaloUpdate.sh and/or generate_GatherScatter.sh to generate updated code then run
 
   ./generate_HaloUpdate.sh
-  diff haloUpdate_all.current haloUpdate_all.subr
+  diff haloUpdate_all.subr.current haloUpdate_all.subr
 
   and/or
 
   ./generate_GatherScatter.sh
-  diff GatherScatter_all.current GatherScatter_all.subr
+  diff GatherScatter_all.subr.current GatherScatter_all.subr
 
   ! Review diffences with the current code (HaloUpdate_all.current)
 

@@ -150,7 +150,7 @@ contains
       i, j, n              ,&! loop indices
       iblock, jblock       ,&! block loop indices
       iindg, jindg         ,&! i,j global index
-      is, js                 ! temp start, end indices
+      is, js                 ! temp start indices
 
    character(len=*), parameter :: subname = '(create_blocks)'
 
