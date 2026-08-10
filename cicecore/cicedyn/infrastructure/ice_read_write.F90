@@ -2246,11 +2246,7 @@
          allocate(work_g1(1,1))   ! to save memory
       endif
 
-!tcx      if (lgrid_ext) then
       call gather_global(work_g1, work, master_task, distrb_info, fillValue=c0, grid_ext=lgrid_ext)
-!      else
-!         call gather_global(work_g1, work, master_task, distrb_info, fillValue=c0)
-!      endif
 
       if (my_task == master_task) then
 
@@ -2367,17 +2363,10 @@
          allocate(work_g1(1,1,ncat))   ! to save memory
       endif
 
-!tcx      if (lgrid_ext) then
       do n=1,ncat
          call gather_global(work_g1(:,:,n), work(:,:,n,:), &
               master_task, distrb_info, fillValue=c0, grid_ext=lgrid_ext)
       enddo
-!      else
-!         do n=1,ncat
-!            call gather_global(work_g1(:,:,n), work(:,:,n,:), &
-!                    master_task, distrb_info, fillValue=c0)
-!         enddo
-!      endif
 
       if (present(varname)) then
          lvarname = trim(varname)

@@ -141,8 +141,8 @@
       field_type(3) = field_type_angle
       types_name(4) = 'none'
       field_type(4) = field_type_noupdate
-!      types_name(5) = 'unknown'                                                                                                
-!      field_type(5) = field_type_unknown  ! aborts in CICE, as expected                                                        
+!      types_name(5) = 'unknown'
+!      field_type(5) = field_type_unknown  ! aborts in CICE, as expected
 
       locs_name (1) = 'center'
       field_loc (1)  = field_loc_center
@@ -154,8 +154,8 @@
       field_loc (4)  = field_loc_Eface
       locs_name (5) = 'none'
       field_loc (5)  = field_loc_noupdate
-!      locs_name (6) = 'unknown'                                                                                                
-!      field_loc (6)  = field_loc_unknown  ! aborts in CICE, as expected                                                        
+!      locs_name (6) = 'unknown'
+!      field_loc (6)  = field_loc_unknown  ! aborts in CICE, as expected
 
       fill_name (1) = 'fill'
       callfill(1) = .true.
@@ -1106,7 +1106,7 @@
                         chkval = da2(i,j,iblock)
                      endif
                      ! this is wrong, the halo update is switching the sign of the fill values
-                     ! when reflecting across the tripole if rsign = -1., need to adjust chkval 
+                     ! when reflecting across the tripole if rsign = -1., need to adjust chkval
                      ! accordingly but ultimately, need to fix the haloupdate.  to limit this fix,
                      ! only apply it when rsign=-1 (could apply it when rsign=1 but da2 is never -chkval).
                      ! we are setting chkval to the incorrect value to match the haloupdate.

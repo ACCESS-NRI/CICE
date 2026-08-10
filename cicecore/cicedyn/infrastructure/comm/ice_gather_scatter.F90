@@ -177,9 +177,9 @@
          allocate(LARRAY_G(1-nghost:nx_global+nghost,1-nghost:ny_global+nghost))
          LARRAY_G(1-nghost:nx_global+nghost,1-nghost:ny_global+nghost) = ARRAY_G(1:nx_global+2,1:ny_global+2)
       else
-         allocate(LARRAY_G(1:nx_global,1:ny_global))                                      
-         LARRAY_G(:,:) = ARRAY_G(:,:)                                                     
-      endif                                                                               
+         allocate(LARRAY_G(1:nx_global,1:ny_global))
+         LARRAY_G(:,:) = ARRAY_G(:,:)
+      endif
 
       do n=1,nblocks_tot
 
@@ -677,11 +677,11 @@
                   jsrc = ny_global - (j-ny_global) - joffset + 1  ! joffset = 0 for u center, joffset = 1 for T center
                   if (isrc < 1        ) isrc = isrc + nx_global
                   if (isrc > nx_global) isrc = isrc - nx_global
-   
+
                   !*** for center and Eface on u-fold, and NE corner and Nface
                   !*** on T-fold, do not need to replace
                   !*** top row of physical domain, so jsrc should be greater than j
-   
+
                   if (jsrc > j) then
                      ! do nothing
                   elseif (jsrc == j) then
@@ -953,9 +953,9 @@
          allocate(LARRAY_G(1-nghost:nx_global+nghost,1-nghost:ny_global+nghost))
          LARRAY_G(1-nghost:nx_global+nghost,1-nghost:ny_global+nghost) = ARRAY_G(1:nx_global+2,1:ny_global+2)
       else
-         allocate(LARRAY_G(1:nx_global,1:ny_global))                                      
-         LARRAY_G(:,:) = ARRAY_G(:,:)                                                     
-      endif                                                                               
+         allocate(LARRAY_G(1:nx_global,1:ny_global))
+         LARRAY_G(:,:) = ARRAY_G(:,:)
+      endif
 
       do n=1,nblocks_tot
 
@@ -1453,11 +1453,11 @@
                   jsrc = ny_global - (j-ny_global) - joffset + 1  ! joffset = 0 for u center, joffset = 1 for T center
                   if (isrc < 1        ) isrc = isrc + nx_global
                   if (isrc > nx_global) isrc = isrc - nx_global
-   
+
                   !*** for center and Eface on u-fold, and NE corner and Nface
                   !*** on T-fold, do not need to replace
                   !*** top row of physical domain, so jsrc should be greater than j
-   
+
                   if (jsrc > j) then
                      ! do nothing
                   elseif (jsrc == j) then
@@ -1729,9 +1729,9 @@
          allocate(LARRAY_G(1-nghost:nx_global+nghost,1-nghost:ny_global+nghost))
          LARRAY_G(1-nghost:nx_global+nghost,1-nghost:ny_global+nghost) = ARRAY_G(1:nx_global+2,1:ny_global+2)
       else
-         allocate(LARRAY_G(1:nx_global,1:ny_global))                                      
-         LARRAY_G(:,:) = ARRAY_G(:,:)                                                     
-      endif                                                                               
+         allocate(LARRAY_G(1:nx_global,1:ny_global))
+         LARRAY_G(:,:) = ARRAY_G(:,:)
+      endif
 
       do n=1,nblocks_tot
 
@@ -2229,11 +2229,11 @@
                   jsrc = ny_global - (j-ny_global) - joffset + 1  ! joffset = 0 for u center, joffset = 1 for T center
                   if (isrc < 1        ) isrc = isrc + nx_global
                   if (isrc > nx_global) isrc = isrc - nx_global
-   
+
                   !*** for center and Eface on u-fold, and NE corner and Nface
                   !*** on T-fold, do not need to replace
                   !*** top row of physical domain, so jsrc should be greater than j
-   
+
                   if (jsrc > j) then
                      ! do nothing
                   elseif (jsrc == j) then
@@ -2483,7 +2483,7 @@
 !  If grid_ext is true, then ARRAY_G is extended grid and updates outer halo
 !  If grid_ext is false, then ARRAY_G is 1:nx_global,1:ny_global and outer
 !    halo is updated for cyclic and tripole bcs.
-!  If grid_ext is false and interior is true, then only the interior data will 
+!  If grid_ext is false and interior is true, then only the interior data will
 !    be scattered, no outer halo bcs will be applied
 
    integer (int_kind), intent(in) :: &

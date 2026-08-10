@@ -664,7 +664,7 @@
                elseif (jsrc == j .and. i /= isrc .and. .not.(index(halofld,'STRESS') > 0)) then
                   ! average, but don't average corner points or point if it's redundant with itself (i == isrc)
                   ! or if it's a stress haloupdate
-                  cidata_gl2(i,j,k1,k2) = 0.5_dbl_kind * ((cidata_glo(i,jsrc)+rkadd) + rsign*(cidata_glo(isrc,jsrc)+rkadd)) 
+                  cidata_gl2(i,j,k1,k2) = 0.5_dbl_kind * ((cidata_glo(i,jsrc)+rkadd) + rsign*(cidata_glo(isrc,jsrc)+rkadd))
                   cjdata_gl2(i,j,k1,k2) = 0.5_dbl_kind * ((cjdata_glo(i,jsrc)+rkadd) + rsign*(cjdata_glo(isrc,jsrc)+rkadd))
                else
                   ! copy
@@ -841,7 +841,7 @@
 
                      ! The haloupdate_stress should just update the tripole area where a "flip" is required.  It should
                      ! not update the "redundant" line.  It looks like for tripoleT, the redundant line is flipped in the
-                     ! ice haloupdate_stress call which I think is wrong, but I have implemented in that way in the 
+                     ! ice haloupdate_stress call which I think is wrong, but I have implemented in that way in the
                      ! halochk code.
                      if (index(halofld,'STRESS') > 0) then
                         if (this_block%j_glob(je) == ny_global .and. j > je) then
