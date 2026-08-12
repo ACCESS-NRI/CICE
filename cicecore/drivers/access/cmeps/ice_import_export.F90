@@ -20,8 +20,7 @@ module ice_import_export
   use ice_flux_bgc       , only : faero_atm, faero_ocn
   use ice_flux_bgc       , only : fiso_atm, fiso_ocn, fiso_evap
   use ice_flux_bgc       , only : Qa_iso, Qref_iso, HDO_ocn, H2_18O_ocn, H2_16O_ocn
-  use ice_flux           , only : fresh_ai, fsalt_ai, zlvl, uatm, vatm, potT, Tair, Qa
-  use ice_flux           , only : rhoa, swvdr, swvdf, swidr, swidf, flw, frain
+  use ice_flux           , only : fresh_ai, fsalt_ai, flw, frain, strax, stray
   use ice_flux           , only : fsnow, uocn, vocn, sst, ss_tltx, ss_tlty, frzmlt
   use ice_flux           , only : send_i2x_per_cat
   use ice_flux           , only : sss, Tf, wind, fsw
@@ -187,21 +186,10 @@ contains
     end if
 
     ! from atmosphere
-    call fldlist_add(fldsToIce_num, fldsToIce, 'Sa_z'       )
-    call fldlist_add(fldsToIce_num, fldsToIce, 'Sa_u'       )
-    call fldlist_add(fldsToIce_num, fldsToIce, 'Sa_v'       )
-    call fldlist_add(fldsToIce_num, fldsToIce, 'Sa_shum'    )
-    call fldlist_add(fldsToIce_num, fldsToIce, 'Sa_tbot'    )
-    call fldlist_add(fldsToIce_num, fldsToIce, 'Sa_pbot'    )
-    call fldlist_add(fldsToIce_num, fldsToIce, 'Faxa_swvdr' )
-    call fldlist_add(fldsToIce_num, fldsToIce, 'Faxa_swvdf' )
-    call fldlist_add(fldsToIce_num, fldsToIce, 'Faxa_swndr' )
-    call fldlist_add(fldsToIce_num, fldsToIce, 'Faxa_swndf' )
-    call fldlist_add(fldsToIce_num, fldsToIce, 'Faxa_lwdn'  )
     call fldlist_add(fldsToIce_num, fldsToIce, 'Faxa_rain'  )
     call fldlist_add(fldsToIce_num, fldsToIce, 'Faxa_snow'  )
-    call fldlist_add(fldsToIce_num, fldsToIce, 'Sa_ptem'    ) !cesm
-    call fldlist_add(fldsToIce_num, fldsToIce, 'Sa_dens'    ) !cesm
+    call fldlist_add(fldsToIce_num, fldsToIce, 'Faia_taux'  )
+    call fldlist_add(fldsToIce_num, fldsToIce, 'Faia_tauy'  )
 
     ! the following are advertised but might not be connected if they are not present
     ! in the cmeps esmFldsExchange_xxx_mod.F90 that is model specific
@@ -259,15 +247,6 @@ contains
        call fldlist_add(fldsFrIce_num, fldsFrIce, 'Si_thick'    )
        call fldlist_add(fldsFrIce_num, fldsFrIce, 'Si_floediam' )
     end if
-
-    ! ice/atm fluxes computed by ice
-    call fldlist_add(fldsFrIce_num, fldsFrIce, 'Faii_taux'      )
-    call fldlist_add(fldsFrIce_num, fldsFrIce, 'Faii_tauy'      )
-    call fldlist_add(fldsFrIce_num, fldsFrIce, 'Faii_lat'       )
-    call fldlist_add(fldsFrIce_num, fldsFrIce, 'Faii_sen'       )
-    call fldlist_add(fldsFrIce_num, fldsFrIce, 'Faii_lwup'      )
-    call fldlist_add(fldsFrIce_num, fldsFrIce, 'Faii_evap'      )
-    call fldlist_add(fldsFrIce_num, fldsFrIce, 'Faii_swnet'     )
 
     ! ice/ocn fluxes computed by ice
     call fldlist_add(fldsFrIce_num, fldsFrIce, 'Fioi_melth'     )
@@ -452,7 +431,7 @@ contains
     integer          , intent(out) :: rc
 
     ! local variables
-    integer,parameter                :: nflds=16
+    integer,parameter                :: nflds=5
     integer,parameter                :: nfldv=6
     integer                          :: i, j, iblk, n, k
     integer                          :: ilo, ihi, jlo, jhi !beginning and end of physical domain
@@ -518,63 +497,19 @@ contains
     call state_getimport(importState, 'So_s', output=aflds, index=2, rc=rc)
     if (ChkErr(rc,__LINE__,u_FILE_u)) return
 
-    ! import atm states
-
-    call state_getimport(importState, 'Sa_z', output=aflds, index=3, rc=rc)
-    if (ChkErr(rc,__LINE__,u_FILE_u)) return
-
-    if (State_FldChk(importState, 'Sa_ptem') .and. State_fldchk(importState, 'Sa_dens')) then
-       call state_getimport(importState, 'Sa_ptem', output=aflds, index=4, rc=rc)
-       if (ChkErr(rc,__LINE__,u_FILE_u)) return
-       call state_getimport(importState, 'Sa_dens', output=aflds, index=5, rc=rc)
-       if (ChkErr(rc,__LINE__,u_FILE_u)) return
-    else if (State_FldChk(importState, 'Sa_pbot')) then
-       call state_getimport(importState, 'Sa_pbot', output=aflds, index=6, rc=rc)
-       if (ChkErr(rc,__LINE__,u_FILE_u)) return
-    else
-       call abort_ice(trim(subname)//&
-            ": ERROR either Sa_ptem and Sa_dens OR Sa_pbot must be in import state")
-    end if
-
-    call state_getimport(importState, 'Sa_tbot', output=aflds, index=7, rc=rc)
-    if (ChkErr(rc,__LINE__,u_FILE_u)) return
-
-    call state_getimport(importState, 'Sa_shum', output=aflds, index=8, rc=rc)
-    if (ChkErr(rc,__LINE__,u_FILE_u)) return
-
     ! import ocn/ice fluxes
 
-    call state_getimport(importState, 'Fioo_q', output=aflds, index=9, &
+    call state_getimport(importState, 'Fioo_q', output=aflds, index=3, &
          areacor=med2mod_areacor, rc=rc)
     if (ChkErr(rc,__LINE__,u_FILE_u)) return
 
     ! import atm fluxes
 
-    call state_getimport(importState, 'Faxa_swvdr', output=aflds, index=10, &
+    call state_getimport(importState, 'Faxa_rain', output=aflds, index=4, &
          areacor=med2mod_areacor, rc=rc)
     if (ChkErr(rc,__LINE__,u_FILE_u)) return
 
-    call state_getimport(importState, 'Faxa_swndr', output=aflds, index=11, &
-         areacor=med2mod_areacor, rc=rc)
-    if (ChkErr(rc,__LINE__,u_FILE_u)) return
-
-    call state_getimport(importState, 'Faxa_swvdf', output=aflds, index=12, &
-         areacor=med2mod_areacor, rc=rc)
-    if (ChkErr(rc,__LINE__,u_FILE_u)) return
-
-    call state_getimport(importState, 'Faxa_swndf', output=aflds, index=13, &
-         areacor=med2mod_areacor, rc=rc)
-    if (ChkErr(rc,__LINE__,u_FILE_u)) return
-
-    call state_getimport(importState, 'Faxa_lwdn', output=aflds, index=14, &
-         areacor=med2mod_areacor, rc=rc)
-    if (ChkErr(rc,__LINE__,u_FILE_u)) return
-
-    call state_getimport(importState, 'Faxa_rain', output=aflds, index=15, &
-         areacor=med2mod_areacor, rc=rc)
-    if (ChkErr(rc,__LINE__,u_FILE_u)) return
-
-    call state_getimport(importState, 'Faxa_snow', output=aflds, index=16, &
+    call state_getimport(importState, 'Faxa_snow', output=aflds, index=5, &
          areacor=med2mod_areacor, rc=rc)
     if (ChkErr(rc,__LINE__,u_FILE_u)) return
 
@@ -618,16 +553,6 @@ contains
    end do
    !$OMP END PARALLEL DO
 
-    ! flatn_f = - Foxx_evap(i,j,cat,k) * Lsub !! latent heat - 
-    ! fcondtopn_f = botmelt 
-    ! fsurfn_f   (:,:,cat,:) = topmelt(:,:,cat,:) + botmelt(:,:,cat,:)
-      ! if (um_tsfice(i,j,cat,k) > 0.0) then
-   !  trcrn(i,j,nt_Tsfc,cat,k) = 0.0 
-   ! else if (um_tsfice(i,j,cat,k) < -60.0) then
-   !   trcrn(i,j,nt_Tsfc,cat,k) = -60.0 
-   ! else
-   !   trcrn(i,j,nt_Tsfc,cat,k) = um_tsfice(i,j,cat,k)
-   ! endif
 
     !$OMP PARALLEL DO PRIVATE(iblk,i,j)
     do iblk = 1, nblocks
@@ -635,20 +560,9 @@ contains
           do i = 1,nx_block
              sst  (i,j,iblk)         = aflds(i,j, 1,iblk)
              sss  (i,j,iblk)         = aflds(i,j, 2,iblk)
-             zlvl (i,j,iblk)         = aflds(i,j, 3,iblk)
-             ! see below for 4,5,6
-             Tair (i,j,iblk)         = aflds(i,j, 7,iblk)
-             Qa   (i,j,iblk)         = aflds(i,j, 8,iblk)
-             frzmlt (i,j,iblk)       = aflds(i,j, 9,iblk)
-             swvdr(i,j,iblk)         = 0.0 ! aflds(i,j,10,iblk)
-             swidr(i,j,iblk)         = 0.0 !aflds(i,j,11,iblk)
-             swvdf(i,j,iblk)         = 0.0 !aflds(i,j,12,iblk)
-             swidf(i,j,iblk)         = 0.0 !aflds(i,j,13,iblk)
-             flw  (i,j,iblk)         = 0.0 ! aflds(i,j,14,iblk)
-             frain(i,j,iblk)         = aflds(i,j,15,iblk)
-             fsnow(i,j,iblk)         = aflds(i,j,16,iblk)
-             ! strax !! windstress - already handled, come back to this
-             ! stray !! windstress
+             frzmlt (i,j,iblk)       = aflds(i,j, 3,iblk)
+             frain(i,j,iblk)         = aflds(i,j,4,iblk)
+             fsnow(i,j,iblk)         = aflds(i,j,5,iblk)
              
           end do
        end do
@@ -678,40 +592,6 @@ contains
        end do
     end if
 
-    if ( State_fldChk(importState, 'Sa_ptem') .and. State_fldchk(importState,'Sa_dens')) then
-       !$OMP PARALLEL DO PRIVATE(iblk,i,j)
-       do iblk = 1, nblocks
-          do j = 1,ny_block
-             do i = 1,nx_block
-                potT (i,j,iblk) = aflds(i,j, 4,iblk)
-                rhoa (i,j,iblk) = aflds(i,j, 5,iblk)
-             end do
-          end do
-       end do
-       !$OMP END PARALLEL DO
-    else if (State_fldChk(importState, 'Sa_pbot')) then
-       !$OMP PARALLEL DO PRIVATE(iblk,i,j)
-       do iblk = 1, nblocks
-          do j = 1,ny_block
-             do i = 1,nx_block
-                inst_pres_height_lowest = aflds(i,j,6,iblk)
-                if (inst_pres_height_lowest > 0.0_ESMF_KIND_R8) then
-                   potT (i,j,iblk) = Tair(i,j,iblk) * (100000._ESMF_KIND_R8/inst_pres_height_lowest)**0.286_ESMF_KIND_R8
-                else
-                   potT (i,j,iblk) = 0.0_ESMF_KIND_R8
-                end if
-                if (Tair(i,j,iblk) /= 0._ESMF_KIND_R8) then
-                   rhoa(i,j,iblk) = inst_pres_height_lowest / &
-                        (287.058_ESMF_KIND_R8*(1._ESMF_KIND_R8+0.608_ESMF_KIND_R8*Qa(i,j,iblk))*Tair(i,j,iblk))
-                else
-                   rhoa(i,j,iblk) = 1.2_ESMF_KIND_R8
-                endif
-             end do !i
-          end do !j
-       end do !iblk
-       !$OMP END PARALLEL DO
-    end if
-
     deallocate(aflds)
     allocate(aflds(nx_block,ny_block,nfldv,nblocks))
     aflds = c0
@@ -722,10 +602,9 @@ contains
     if (ChkErr(rc,__LINE__,u_FILE_u)) return
     call state_getimport(importState, 'So_v', output=aflds, index=2, rc=rc)
     if (ChkErr(rc,__LINE__,u_FILE_u)) return
-
-    call state_getimport(importState, 'Sa_u', output=aflds, index=3, rc=rc)
+    call state_getimport(importState, 'Faia_taux', output=aflds, index=3, rc=rc)
     if (ChkErr(rc,__LINE__,u_FILE_u)) return
-    call state_getimport(importState, 'Sa_v', output=aflds, index=4, rc=rc)
+    call state_getimport(importState, 'Faia_tauy', output=aflds, index=4, rc=rc)
     if (ChkErr(rc,__LINE__,u_FILE_u)) return
 
     call state_getimport(importState, 'So_dhdx', output=aflds, index=5, rc=rc)
@@ -746,8 +625,8 @@ contains
           do i = 1,nx_block
              uocn (i,j,iblk)   = aflds(i,j, 1,iblk)
              vocn (i,j,iblk)   = aflds(i,j, 2,iblk)
-             uatm (i,j,iblk)   = aflds(i,j, 3,iblk)
-             vatm (i,j,iblk)   = aflds(i,j, 4,iblk)
+             strax (i,j,iblk)   = aflds(i,j, 3,iblk) * aice(i, j, iblk)
+             stray (i,j,iblk)   = aflds(i,j, 4,iblk) * aice(i, j, iblk)
              ss_tltx(i,j,iblk) = aflds(i,j, 5,iblk)
              ss_tlty(i,j,iblk) = aflds(i,j, 6,iblk)
           enddo  !i
@@ -930,16 +809,13 @@ contains
           do i = 1, nx_block
 
              ! atmosphere
-             workx      = uatm(i,j,iblk) ! wind velocity, m/s
-             worky      = vatm(i,j,iblk)
-             uatm (i,j,iblk) = workx*cos(ANGLET(i,j,iblk)) & ! convert to POP grid
-                             + worky*sin(ANGLET(i,j,iblk))   ! note uatm, vatm, wind
-             vatm (i,j,iblk) = worky*cos(ANGLET(i,j,iblk)) & ! are on the T-grid here
+             workx      = strax(i,j,iblk) ! wind stress
+             worky      = stray(i,j,iblk)
+             strax (i,j,iblk) = workx*cos(ANGLET(i,j,iblk)) & ! convert to POP grid
+                             + worky*sin(ANGLET(i,j,iblk))   ! note strax and stray
+             stray (i,j,iblk) = worky*cos(ANGLET(i,j,iblk)) & ! are on the T-grid here
                              - workx*sin(ANGLET(i,j,iblk))
 
-             wind (i,j,iblk) = sqrt(uatm(i,j,iblk)**2 + vatm(i,j,iblk)**2)
-             fsw  (i,j,iblk) = swvdr(i,j,iblk) + swvdf(i,j,iblk) &
-                             + swidr(i,j,iblk) + swidf(i,j,iblk)
           enddo
        enddo
     enddo
@@ -1211,45 +1087,6 @@ contains
        call state_setexport(exportState, 'Si_floediam' , input=floediam , lmask=tmask, ifrac=ailohi, rc=rc)
        if (ChkErr(rc,__LINE__,u_FILE_u)) return
     end if
-
-    ! ------
-    ! ice/atm fluxes computed by ice
-    ! ------
-
-    ! Zonal air/ice stress
-    call state_setexport(exportState, 'Faii_taux' , input=tauxa, lmask=tmask, ifrac=ailohi, &
-         areacor=mod2med_areacor, rc=rc)
-    if (ChkErr(rc,__LINE__,u_FILE_u)) return
-
-    ! Meridional air/ice stress
-    call state_setexport(exportState, 'Faii_tauy' , input=tauya, lmask=tmask, ifrac=ailohi, &
-         areacor=mod2med_areacor, rc=rc)
-    if (ChkErr(rc,__LINE__,u_FILE_u)) return
-
-    ! Latent heat flux (atm into ice)
-    call state_setexport(exportState, 'Faii_lat' , input=flat, lmask=tmask, ifrac=ailohi, &
-         areacor=mod2med_areacor, rc=rc)
-    if (ChkErr(rc,__LINE__,u_FILE_u)) return
-
-    ! Sensible heat flux (atm into ice)
-    call state_setexport(exportState, 'Faii_sen' , input=fsens, lmask=tmask, ifrac=ailohi, &
-         areacor=mod2med_areacor, rc=rc)
-    if (ChkErr(rc,__LINE__,u_FILE_u)) return
-
-    ! longwave outgoing (upward), average over ice fraction only
-    call state_setexport(exportState, 'Faii_lwup' , input=flwout, lmask=tmask, ifrac=ailohi, &
-         areacor=mod2med_areacor, rc=rc)
-    if (ChkErr(rc,__LINE__,u_FILE_u)) return
-
-    ! Evaporative water flux (kg/m^2/s)
-    call state_setexport(exportState, 'Faii_evap' , input=evap, lmask=tmask, ifrac=ailohi, &
-         areacor=mod2med_areacor, rc=rc)
-    if (ChkErr(rc,__LINE__,u_FILE_u)) return
-
-    ! Shortwave flux absorbed in ice and ocean (W/m^2)
-    call state_setexport(exportState, 'Faii_swnet' , input=fswabs, lmask=tmask, ifrac=ailohi, &
-         areacor=mod2med_areacor, rc=rc)
-    if (ChkErr(rc,__LINE__,u_FILE_u)) return
 
     ! ------
     ! ice/ocn fluxes computed by ice
@@ -2135,7 +1972,7 @@ contains
    call fldlist_add(fldsFrIce_num , fldsFrIce, 'Si_topk', ungridded_lbound=1, ungridded_ubound=ncat) ! from ice flux: keffn_top
    call fldlist_add(fldsFrIce_num , fldsFrIce, 'Si_pndf_n', ungridded_lbound=1, ungridded_ubound=ncat) ! from icepack_shorwave: apeffn
    call fldlist_add(fldsFrIce_num , fldsFrIce, 'Si_pndt_n', ungridded_lbound=1, ungridded_ubound=ncat) ! from ice state field: trcrn
-   call fldlist_add(fldsFrIce_num , fldsFrIce, 'sstfrz')
+   call fldlist_add(fldsFrIce_num , fldsFrIce, 'Si_Tf')
 
    write (tmpString, *) ncat
    call ESMF_LogWrite("CICE number of ice categories: " // trim(tmpString))
@@ -2193,7 +2030,7 @@ contains
       call state_setexport(exportState, 'Si_vice_n', input=vicen , lmask=tmask, ifrac=ailohi, rc=rc, index=n, ungridded_index=n)
    end do
 
-   call state_setexport(exportState, 'sstfrz', input=Tf , lmask=tmask, ifrac=ailohi, rc=rc)
+   call state_setexport(exportState, 'Si_Tf', input=Tf , lmask=tmask, ifrac=ailohi, rc=rc)
 
    ! To conserve pond areas, scale by ice fractions before mapping. Unscale in the atmosphere after mapping
    pndfn_scaled(:,:,:,:) = apeffn(:,:,:,:) * aicen(:,:,:,:)

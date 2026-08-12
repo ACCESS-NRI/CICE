@@ -264,6 +264,10 @@
          file=__FILE__, line=__LINE__)
 
       if (.not. calc_strair) then
+         call ice_HaloUpdate (strax,         halo_info, &
+                              field_loc_center, field_type_vector)
+         call ice_HaloUpdate (stray,         halo_info, &
+                              field_loc_center, field_type_vector)
          call grid_average_X2Y('F', strax, grid_atm_dynu, strairxU, 'U')
          call grid_average_X2Y('F', stray, grid_atm_dynv, strairyU, 'U')
       else
