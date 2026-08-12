@@ -252,14 +252,14 @@ target_sources(cicelib PRIVATE
   ${CICE_CORE}/cicedyn/infrastructure/ice_shr_reprosum86.c
 
   # MPI
-  ${CICE_CORE}/cicedyn/infrastructure/comm/mpi/ice_boundary.F90
-  ${CICE_CORE}/cicedyn/infrastructure/comm/mpi/ice_broadcast.F90
-  ${CICE_CORE}/cicedyn/infrastructure/comm/mpi/ice_communicate.F90
-  ${CICE_CORE}/cicedyn/infrastructure/comm/mpi/ice_exit.F90
-  ${CICE_CORE}/cicedyn/infrastructure/comm/mpi/ice_gather_scatter.F90
-  ${CICE_CORE}/cicedyn/infrastructure/comm/mpi/ice_global_reductions.F90
-  ${CICE_CORE}/cicedyn/infrastructure/comm/mpi/ice_reprosum.F90
-  ${CICE_CORE}/cicedyn/infrastructure/comm/mpi/ice_timers.F90
+  ${CICE_CORE}/cicedyn/infrastructure/comm/ice_boundary.F90
+  ${CICE_CORE}/cicedyn/infrastructure/comm/ice_broadcast.F90
+  ${CICE_CORE}/cicedyn/infrastructure/comm/ice_communicate.F90
+  ${CICE_CORE}/cicedyn/infrastructure/comm/ice_exit.F90
+  ${CICE_CORE}/cicedyn/infrastructure/comm/ice_gather_scatter.F90
+  ${CICE_CORE}/cicedyn/infrastructure/comm/ice_global_reductions.F90
+  ${CICE_CORE}/cicedyn/infrastructure/comm/ice_reprosum.F90
+  ${CICE_CORE}/cicedyn/infrastructure/comm/ice_timers.F90
 )
 
 if(CICE_DRIVER MATCHES "nuopc/cmeps")
