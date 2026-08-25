@@ -120,6 +120,11 @@ else if (${grid} == 'tx1') then
     set blckx = 10; set blcky = 10
   endif
 
+else if (${grid} == 'access_100km') then
+  set nxglob = 360
+  set nyglob = 324
+  set blckx = 45; set blcky = 27
+
 # this is for unit testing
 else if (${grid} == 'none') then
   set nxglob = 1
