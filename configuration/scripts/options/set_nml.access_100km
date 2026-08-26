@@ -1,7 +1,4 @@
 grid_format = 'mom_nc'
 grid_file   = 'ICE_MACHINE_INPUTDATA/CICE_data/grid/access_100km/ocean_hgrid_access_100km.nc'
 kmt_file    = 'ICE_MACHINE_INPUTDATA/CICE_data/grid/access_100km/kmt_access_100km.nc'
-dt = 900
-fyear_init = 2005
-ycycle = 1
-year_init      = 1900
+atm_data_dir    = 'ICE_MACHINE_INPUTDATA/CICE_data/forcing/access_100km/JRA55do/'
