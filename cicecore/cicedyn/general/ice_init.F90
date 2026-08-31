@@ -247,9 +247,6 @@
         critical_strain, critical_probability, mean_ln_slope, var_ln_const, &
         hfrazilmin,     weld_method,    wave_dep_welding, Tliquidus_max,  &
         hi_min,                                                               &
-        floediam,       c_weld,         hfrazilmin,      Tliquidus_max,   hi_min,       &
-        floediam,       c_weld,         hfrazilmin,      weld_method,     &
-        wave_dep_welding, Tliquidus_max,   hi_min,       &
         itd_area_min,   itd_mass_min,    tscale_pnd_drain
 
       namelist /dynamics_nml/ &
@@ -2500,8 +2497,6 @@
          write(nu_diag,1003) ' var_ln_const     = ', var_ln_const, ' : lognormal variance'
          write(nu_diag,1030) ' weld_method      = ', trim(weld_method), ' : floe welding method'
          write(nu_diag,1010) ' wave_dep_welding = ', wave_dep_welding, ' : use wave-limited welding'
-         write(nu_diag,1011) ' weld_method      = ', trim(weld_method), ' : floe welding method'
-         write(nu_diag,1010) ' wave_dep_welding = ', wave_dep_welding
          if (tr_fsd) then
             if (wave_spec) then
                tmpstr2 = ' : use wave spectrum for floe size distribution'
