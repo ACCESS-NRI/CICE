@@ -1,28 +1,24 @@
 #==============================================================================
-# Makefile macros for NCI Gadi, intel compiler
+# Makefile macros for NCI Gadi, gnu compiler
 #==============================================================================
 
-CPP        := fpp
+CPP        := cpp
 CPPDEFS    := -DFORTRANUNDERSCORE -DREPRODUCIBLE ${ICE_CPPDEFS}
-CFLAGS     := -c -O2 -fp-model precise -Wno-unused-variable -Wno-unused-parameter
+CFLAGS     := -c -O2 -Wno-unused-variable -Wno-unused-parameter
 
-FIXEDFLAGS := -132
-FREEFLAGS  := -FR
-
-NCI_INTEL_FLAGS := -r8 -i4 -traceback -w -fpe0 -ftz -convert big_endian -assume byterecl -check noarg_temp_created
-NCI_REPRO_FLAGS := -fp-model precise -fp-model source -align all
+FIXEDFLAGS := -ffixed-line-length-132
+FREEFLAGS  := -ffree-form
+FFLAGS     := -fconvert=big-endian -fbacktrace -ffree-line-length-none -fallow-argument-mismatch
 
 ifeq ($(ICE_BLDDEBUG), true)
-    NCI_DEBUG_FLAGS := -O0 -debug all -check all -no-vec -assume nobuffered_io
-    FFLAGS          := $(NCI_INTEL_FLAGS) $(NCI_REPRO_FLAGS) $(NCI_DEBUG_FLAGS)
-    CPPDEFS         := $(CPPDEFS) -DDEBUG=$(DEBUG)
+    FFLAGS  += -O0 -g -fcheck=bounds -finit-real=nan -fimplicit-none -ffpe-trap=invalid,zero,overflow
+    CPPDEFS := $(CPPDEFS) -DDEBUG=$(DEBUG)
 else
-  NCI_OPTIM_FLAGS := -O2 -debug all -check none -assume buffered_io
-  FFLAGS          := $(NCI_INTEL_FLAGS) $(NCI_REPRO_FLAGS) $(NCI_OPTIM_FLAGS)
+    FFLAGS  += -O2
 endif
 
-SCC   := icx 
-SFC   := ifort
+SCC   := gcc
+SFC   := gfortran
 MPICC := mpicc
 MPIFC := mpifort
 
@@ -39,7 +35,7 @@ SLIBS := $(SLIBS)
 INCLDIR := $(INCLDIR)
 
 # if spack modules loaded, use them. otherwise use system modules
-ifndef SPACK_NETCDF_FORTRAN_ROOT  
+ifndef SPACK_NETCDF_FORTRAN_ROOT
    SLIBS += -L$(NETCDF)/lib -lnetcdf -lnetcdff
    INCLDIR += -I$(NETCDF)/include
 else
@@ -49,10 +45,10 @@ else
    INCLDIR += -I$(SPACK_NETCDF_FORTRAN_ROOT)/include
 endif
 
-ifeq ($(ICE_THREADED), true) 
-   LDFLAGS += -qopenmp 
-   CFLAGS += -qopenmp 
-   FFLAGS += -qopenmp 
+ifeq ($(ICE_THREADED), true)
+   LDFLAGS += -fopenmp
+   CFLAGS += -fopenmp
+   FFLAGS += -fopenmp
 endif
 
 ifeq ($(ICE_IOTYPE), pio1)
@@ -64,10 +60,10 @@ ifeq ($(ICE_IOTYPE), pio2)
   ifndef SPACK_PARALLELIO_ROOT
     SLIBS += -L$(PARALLELIO_ROOT)/lib -lpioc -lpiof
   else
-   SLIBS += -L$(SPACK_PARALLELIO_ROOT)/lib -lpioc -lpiof  
+   SLIBS += -L$(SPACK_PARALLELIO_ROOT)/lib -lpioc -lpiof
    INCLDIR += -I $(SPACK_PARALLELIO_ROOT)/include
   endif
 
-  SLIBS += $(SLIBS) -L$(OMPI_BASE)/lib -lmpi_usempif08 -lmpi_usempi_ignore_tkr -lmpi_mpifh 
+  SLIBS += $(SLIBS) -L$(OMPI_BASE)/lib -lmpi_usempif08 -lmpi_usempi_ignore_tkr -lmpi_mpifh
 
 endif
