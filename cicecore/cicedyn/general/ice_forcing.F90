@@ -2239,10 +2239,10 @@
          grd = 'gx1'
       else if (index(trim(atm_data_dir),'gx3') > 0) then
          grd = 'gx3'
+      else if (index(trim(atm_data_dir),'tx1m') > 0) then
+         grd = 'tx1m'
       else if (index(trim(atm_data_dir),'tx1') > 0) then
          grd = 'tx1'
-      else if (index(trim(atm_data_dir),'access_100km') > 0) then
-         grd = 'access_100km'
       else
          call abort_ice(error_message=subname//' unknown grid type')
       endif

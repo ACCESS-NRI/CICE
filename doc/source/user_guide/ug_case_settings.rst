@@ -101,6 +101,7 @@ can be modified as needed.
    " ", "gx1", "1-deg displace-pole (Greenland) global grid", " "
    " ", "gx3", "3-deg displace-pole (Greenland) global grid", " "
    " ", "tx1", "1-deg tripole global grid", " "
+   " ", "tx1m", "1-deg tripole global grid (modified)", " "
    "ICE_NTASKS", "integer", "number of MPI tasks", "set by cice.setup"
    "ICE_NTHRDS", "integer", "number of threads per task", "set by cice.setup"
    "ICE_OMPSCHED", "string", "OpenMP SCHEDULE env setting", "static,1"
