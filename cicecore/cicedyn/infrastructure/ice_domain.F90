@@ -42,7 +42,9 @@
               init_domain_distribution
 
    integer (int_kind), public :: &
-      nblocks         ! actual number of blocks on this processor
+      nblocks, &         ! actual number of blocks on this processor
+      nblocks_max, &     ! max blocks on a proc across all procs
+      nblocks_active     ! total number of active blocks
 
    logical (kind=log_kind), public :: &
       close_boundaries   ! deprecated Nov, 2025
@@ -407,10 +409,8 @@
 #ifdef USE_NETCDF
       fid                ,&! file id
       varid              ,&! var id
-      status             ,&! netcdf return code
+      status               ! netcdf return code
 #endif
-      tblocks_tmp        ,&! total number of blocks
-      nblocks_max          ! max blocks on proc
 
    real (dbl_kind) :: &
       puny, &              ! puny limit
@@ -613,11 +613,11 @@
       nblocks = 0
    endif
 
-   tblocks_tmp = global_sum(nblocks, distrb_info)
+   nblocks_active = global_sum(nblocks, distrb_info)
    nblocks_max = global_maxval(nblocks, distrb_info)
 
    if (my_task == master_task) then
-      write(nu_diag,'(2a,i8)') subname,' total number of blocks is', tblocks_tmp
+      write(nu_diag,'(2a,i8)') subname,' total number of blocks is', nblocks_active
    endif
 
    if (nblocks > max_blocks) then
