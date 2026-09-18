@@ -1,4 +1,7 @@
 spack:
+  include:
+  # Include configuration from this repository, with the environment variable defined in build-ci
+  - path: $SPACK_MANIFEST_REPOSITORY_PATH/.github/build-ci/config
   specs:
   - access-cice @git.{{ ref }} +access3 io_type=PIO
   packages:
@@ -7,13 +10,7 @@ spack:
     python:
       require:
       - '@3.11.14'
-    intel-oneapi-compilers-classic:
-      require:
-      - '@{{ intel_compiler_version }}'
     all:
       require:
       - '%access_intel'
-      - target={{ target }}
-  concretizer:
-    unify: false
   view: false
