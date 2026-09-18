@@ -3,5 +3,9 @@ spack:
   # Include configuration from this repository, with the environment variable defined in build-ci
   - path: $SPACK_MANIFEST_REPOSITORY_PATH/.github/build-ci/config
   specs:
-  - access-cice @git.{{ ref }} ~access3 io_type=PIO %%access_gcc
+  - access-cice @git.{{ ref }} ~access3 io_type=PIO
+  packages:
+    all:
+      require:
+      - '%access_gcc'
   view: false

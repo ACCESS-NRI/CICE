@@ -3,7 +3,11 @@ spack:
   # Include configuration from this repository, with the environment variable defined in build-ci
   - path: $SPACK_MANIFEST_REPOSITORY_PATH/.github/build-ci/config
   specs:
-  - access-cice @git.{{ ref }} ~access3 io_type=PIO %%access_intel
-  - access-cice @git.{{ ref }} ~access3 io_type=NetCDF %%access_intel
-  - access-cice @git.{{ ref }} ~access3 io_type=Binary %%access_intel
+  - access-cice @git.{{ ref }} ~access3 io_type=PIO
+  - access-cice @git.{{ ref }} ~access3 io_type=NetCDF
+  - access-cice @git.{{ ref }} ~access3 io_type=Binary
+  packages:
+    all:
+      require:
+      - '%access_intel'
   view: false
