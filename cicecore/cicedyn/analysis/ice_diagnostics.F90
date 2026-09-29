@@ -1939,7 +1939,6 @@
       write(nu_diag,*) ' '
       call flush_fileunit(nu_diag)
 
-      ! check for icepack abort after printing, so the state is still written
       if (icepack_warnings_aborted()) call abort_ice(error_message=subname//' '//trim(plabel), &
          file=__FILE__, line=__LINE__)
 
