@@ -22,7 +22,7 @@
       use ice_domain_size, only: max_blocks
       use ice_exit, only: abort_ice
       use ice_fileunits, only: nu_diag
-      use icepack_intfc, only: icepack_warnings_flush, icepack_warnings_aborted
+      use icepack_intfc, only: icepack_warnings_flush, icepack_warnings_aborted, icepack_configure
       use icepack_intfc, only: icepack_prep_radiation
       use icepack_intfc, only: icepack_step_therm1
       use icepack_intfc, only: icepack_step_therm2
@@ -251,6 +251,7 @@
       use ice_grid, only: lmask_n, lmask_s, tmask, opmask
       use ice_state, only: aice, aicen, aicen_init, vicen_init, &
           vice, vicen, vsno, vsnon, trcrn, vsnon_init
+      use ice_diagnostics, only: diagnostic_abort
 #ifdef CICE_IN_NEMO
       use ice_state, only: aice_init
 #endif
@@ -620,12 +621,20 @@
             enddo
          endif ! tr_aero
 
+         call icepack_warnings_flush(nu_diag)
+         if (icepack_warnings_aborted()) then
+            ! clear the icepack abort flag so print_state can run, then
+            ! print location (global i/j, lat/lon) and ice state and abort
+            call icepack_configure()
+            call diagnostic_abort(i, j, iblk, subname//' icepack_step_therm1 aborted')
+         endif
+
       enddo ! i
       enddo ! j
 
-      call icepack_warnings_flush(nu_diag)
-      if (icepack_warnings_aborted()) call abort_ice(error_message=subname, &
-         file=__FILE__, line=__LINE__)
+      ! call icepack_warnings_flush(nu_diag)
+      ! if (icepack_warnings_aborted()) call abort_ice(error_message=subname, &
+      !    file=__FILE__, line=__LINE__)
 
       end subroutine step_therm1
 
