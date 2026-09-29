@@ -22,7 +22,7 @@
       use ice_domain_size, only: max_blocks
       use ice_exit, only: abort_ice
       use ice_fileunits, only: nu_diag
-      use icepack_intfc, only: icepack_warnings_flush, icepack_warnings_aborted, icepack_configure
+      use icepack_intfc, only: icepack_warnings_flush, icepack_warnings_aborted
       use icepack_intfc, only: icepack_prep_radiation
       use icepack_intfc, only: icepack_step_therm1
       use icepack_intfc, only: icepack_step_therm2
@@ -623,9 +623,7 @@
 
          call icepack_warnings_flush(nu_diag)
          if (icepack_warnings_aborted()) then
-            ! clear the icepack abort flag so print_state can run, then
             ! print location (global i/j, lat/lon) and ice state and abort
-            call icepack_configure()
             call diagnostic_abort(i, j, iblk, subname//' icepack_step_therm1 aborted')
          endif
 
