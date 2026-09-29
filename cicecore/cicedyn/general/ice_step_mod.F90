@@ -630,10 +630,6 @@
       enddo ! i
       enddo ! j
 
-      ! call icepack_warnings_flush(nu_diag)
-      ! if (icepack_warnings_aborted()) call abort_ice(error_message=subname, &
-      !    file=__FILE__, line=__LINE__)
-
       end subroutine step_therm1
 
 !=======================================================================
