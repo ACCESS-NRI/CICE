@@ -1967,10 +1967,6 @@
 
       character(len=*), parameter :: subname = '(diagnostic_abort)'
 
-      ! call icepack_warnings_flush(nu_diag)
-      ! if (icepack_warnings_aborted()) call abort_ice(error_message=subname, &
-      !    file=__FILE__, line=__LINE__)
-
       this_block = get_block(blocks_ice(iblk),iblk)
 
       call flush_fileunit(nu_diag)
