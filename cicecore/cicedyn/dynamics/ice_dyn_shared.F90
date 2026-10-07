@@ -29,7 +29,7 @@
                 deformations, deformationsC_T, deformationsCD_T, &
                 strain_rates, strain_rates_T, strain_rates_U, &
                 visc_replpress, &
-                dyn_haloUpdate, &
+                dyn_haloUpdate, dyn_haloUpdate_mixed, &
                 stack_fields, unstack_fields
 
       ! namelist parameters
@@ -2535,7 +2535,7 @@
 
       subroutine dyn_haloUpdate2(halo_info, halo_info_mask, field_loc, field_type, fld1, fld2)
 
-      use ice_boundary, only: ice_halo, ice_HaloUpdate
+      use ice_boundary, only: ice_halo, ice_HaloUpdate, ice_HaloUpdate_multi
       use ice_domain, only: maskhalo_dyn, halo_dynbundle
       use ice_timers, only: ice_timer_start, ice_timer_stop, timer_bound
 
@@ -2553,8 +2553,9 @@
 
       ! local variables
 
-      real (kind=dbl_kind), dimension (nx_block,ny_block,2,max_blocks) :: &
-         fldbundle       ! work array for boundary updates
+      integer (kind=int_kind), dimension(2) :: &
+         locs  ,       & ! field loc, per field
+         types           ! field_type, per field
 
       character(len=*), parameter :: subname = '(dyn_haloUpdate2)'
 
@@ -2562,15 +2563,14 @@
       ! single process performs better without bundling fields
       if (halo_dynbundle) then
 
-         call stack_fields(fld1, fld2, fldbundle)
+         ! all fields in one round of messages, packed directly (no stack copies)
+         locs  = field_loc
+         types = field_type
          if (maskhalo_dyn) then
-            call ice_HaloUpdate (fldbundle, halo_info_mask, &
-                                 field_loc, field_type)
+            call ice_HaloUpdate_multi (halo_info_mask, locs, types, fld1, fld2)
          else
-            call ice_HaloUpdate (fldbundle, halo_info     , &
-                                 field_loc, field_type)
+            call ice_HaloUpdate_multi (halo_info     , locs, types, fld1, fld2)
          endif
-         call unstack_fields(fldbundle, fld1, fld2)
 
       else
 
@@ -2596,7 +2596,7 @@
 
       subroutine dyn_haloUpdate3(halo_info, halo_info_mask, field_loc, field_type, fld1, fld2, fld3)
 
-      use ice_boundary, only: ice_halo, ice_HaloUpdate
+      use ice_boundary, only: ice_halo, ice_HaloUpdate, ice_HaloUpdate_multi
       use ice_domain, only: maskhalo_dyn, halo_dynbundle
       use ice_timers, only: ice_timer_start, ice_timer_stop, timer_bound
 
@@ -2615,8 +2615,9 @@
 
       ! local variables
 
-      real (kind=dbl_kind), dimension (nx_block,ny_block,3,max_blocks) :: &
-         fldbundle       ! work array for boundary updates
+      integer (kind=int_kind), dimension(3) :: &
+         locs  ,       & ! field loc, per field
+         types           ! field_type, per field
 
       character(len=*), parameter :: subname = '(dyn_haloUpdate3)'
 
@@ -2624,15 +2625,14 @@
       ! single process performs better without bundling fields
       if (halo_dynbundle) then
 
-         call stack_fields(fld1, fld2, fld3, fldbundle)
+         ! all fields in one round of messages, packed directly (no stack copies)
+         locs  = field_loc
+         types = field_type
          if (maskhalo_dyn) then
-            call ice_HaloUpdate (fldbundle, halo_info_mask, &
-                                 field_loc, field_type)
+            call ice_HaloUpdate_multi (halo_info_mask, locs, types, fld1, fld2, fld3)
          else
-            call ice_HaloUpdate (fldbundle, halo_info     , &
-                                 field_loc, field_type)
+            call ice_HaloUpdate_multi (halo_info     , locs, types, fld1, fld2, fld3)
          endif
-         call unstack_fields(fldbundle, fld1, fld2, fld3)
 
       else
 
@@ -2662,7 +2662,7 @@
 
       subroutine dyn_haloUpdate4(halo_info, halo_info_mask, field_loc, field_type, fld1, fld2, fld3, fld4)
 
-      use ice_boundary, only: ice_halo, ice_HaloUpdate
+      use ice_boundary, only: ice_halo, ice_HaloUpdate, ice_HaloUpdate_multi
       use ice_domain, only: maskhalo_dyn, halo_dynbundle
       use ice_timers, only: ice_timer_start, ice_timer_stop, timer_bound
 
@@ -2682,8 +2682,9 @@
 
       ! local variables
 
-      real (kind=dbl_kind), dimension (nx_block,ny_block,4,max_blocks) :: &
-         fldbundle       ! work array for boundary updates
+      integer (kind=int_kind), dimension(4) :: &
+         locs  ,       & ! field loc, per field
+         types           ! field_type, per field
 
       character(len=*), parameter :: subname = '(dyn_haloUpdate4)'
 
@@ -2691,15 +2692,14 @@
       ! single process performs better without bundling fields
       if (halo_dynbundle) then
 
-         call stack_fields(fld1, fld2, fld3, fld4, fldbundle)
+         ! all fields in one round of messages, packed directly (no stack copies)
+         locs  = field_loc
+         types = field_type
          if (maskhalo_dyn) then
-            call ice_HaloUpdate (fldbundle, halo_info_mask, &
-                                 field_loc, field_type)
+            call ice_HaloUpdate_multi (halo_info_mask, locs, types, fld1, fld2, fld3, fld4)
          else
-            call ice_HaloUpdate (fldbundle, halo_info     , &
-                                 field_loc, field_type)
+            call ice_HaloUpdate_multi (halo_info     , locs, types, fld1, fld2, fld3, fld4)
          endif
-         call unstack_fields(fldbundle, fld1, fld2, fld3, fld4)
 
       else
 
@@ -2733,7 +2733,7 @@
 
       subroutine dyn_haloUpdate5(halo_info, halo_info_mask, field_loc, field_type, fld1, fld2, fld3, fld4, fld5)
 
-      use ice_boundary, only: ice_halo, ice_HaloUpdate
+      use ice_boundary, only: ice_halo, ice_HaloUpdate, ice_HaloUpdate_multi
       use ice_domain, only: maskhalo_dyn, halo_dynbundle
       use ice_timers, only: ice_timer_start, ice_timer_stop, timer_bound
 
@@ -2754,8 +2754,9 @@
 
       ! local variables
 
-      real (kind=dbl_kind), dimension (nx_block,ny_block,5,max_blocks) :: &
-         fldbundle       ! work array for boundary updates
+      integer (kind=int_kind), dimension(5) :: &
+         locs  ,       & ! field loc, per field
+         types           ! field_type, per field
 
       character(len=*), parameter :: subname = '(dyn_haloUpdate5)'
 
@@ -2763,15 +2764,14 @@
       ! single process performs better without bundling fields
       if (halo_dynbundle) then
 
-         call stack_fields(fld1, fld2, fld3, fld4, fld5, fldbundle)
+         ! all fields in one round of messages, packed directly (no stack copies)
+         locs  = field_loc
+         types = field_type
          if (maskhalo_dyn) then
-            call ice_HaloUpdate (fldbundle, halo_info_mask, &
-                                 field_loc, field_type)
+            call ice_HaloUpdate_multi (halo_info_mask, locs, types, fld1, fld2, fld3, fld4, fld5)
          else
-            call ice_HaloUpdate (fldbundle, halo_info     , &
-                                 field_loc, field_type)
+            call ice_HaloUpdate_multi (halo_info     , locs, types, fld1, fld2, fld3, fld4, fld5)
          endif
-         call unstack_fields(fldbundle, fld1, fld2, fld3, fld4, fld5)
 
       else
 
@@ -2803,6 +2803,49 @@
       call ice_timer_stop(timer_bound)
 
       end subroutine dyn_haloUpdate5
+
+!=======================================================================
+! Do a halo update on 2 to 6 fields that may have different locations
+! and types, in one round of messages (no stack/unstack copies).
+! Results are identical to updating each field on its own.
+
+      subroutine dyn_haloUpdate_mixed(halo_info, halo_info_mask, field_loc, field_type, &
+                                      fld1, fld2, fld3, fld4, fld5, fld6)
+
+      use ice_boundary, only: ice_halo, ice_HaloUpdate_multi
+      use ice_domain, only: maskhalo_dyn
+      use ice_timers, only: ice_timer_start, ice_timer_stop, timer_bound
+
+      type (ice_halo), intent(in) :: &
+         halo_info  , &  ! standard unmasked halo
+         halo_info_mask  ! masked halo
+
+      integer (kind=int_kind), dimension(:), intent(in) :: &
+         field_loc  ,  & ! field loc, per field
+         field_type      ! field_type, per field
+
+      real (kind=dbl_kind), dimension (nx_block,ny_block,max_blocks), intent(inout) :: &
+         fld1        , & ! fields to halo
+         fld2            !
+
+      real (kind=dbl_kind), dimension (nx_block,ny_block,max_blocks), intent(inout), optional :: &
+         fld3, fld4, fld5, fld6  ! further fields to halo
+
+      ! local variables
+
+      character(len=*), parameter :: subname = '(dyn_haloUpdate_mixed)'
+
+      call ice_timer_start(timer_bound)
+      if (maskhalo_dyn) then
+         call ice_HaloUpdate_multi (halo_info_mask, field_loc, field_type, &
+                                    fld1, fld2, fld3, fld4, fld5, fld6)
+      else
+         call ice_HaloUpdate_multi (halo_info     , field_loc, field_type, &
+                                    fld1, fld2, fld3, fld4, fld5, fld6)
+      endif
+      call ice_timer_stop(timer_bound)
+
+      end subroutine dyn_haloUpdate_mixed
 
 !=======================================================================
 ! Load fields into array for boundary updates

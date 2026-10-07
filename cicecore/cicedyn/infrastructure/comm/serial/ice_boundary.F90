@@ -71,6 +71,7 @@
              ice_HaloMask, &
              ice_HaloUpdate,  &
              ice_HaloUpdate_stress, &
+             ice_HaloUpdate_multi, &
              ice_HaloExtrapolate, &
              ice_HaloDestroy
 
@@ -1055,6 +1056,70 @@ contains
 !-----------------------------------------------------------------------
 
  end subroutine ice_HaloUpdate2DR8
+
+!***********************************************************************
+
+ subroutine ice_HaloUpdate_multi(halo, fieldLoc, fieldKind,      &
+                                 array1, array2, array3, array4, &
+                                 array5, array6, fillValue)
+
+!  Multi-array version of ice_HaloUpdate for 2d double precision
+!  arrays, with a field location and kind per array (see the mpi
+!  version).  With serial communication there are no messages to
+!  aggregate, so each array is simply updated in turn; results are
+!  identical to separate ice_HaloUpdate calls.
+
+   type (ice_halo), intent(in) :: &
+      halo                 ! precomputed halo structure containing all
+                           !  information needed for halo update
+
+   integer (int_kind), dimension(:), intent(in) :: &
+      fieldLoc,           &! id for location on horizontal grid, per array
+      fieldKind            ! id for type of field, per array
+
+   real (dbl_kind), dimension(:,:,:), intent(inout) :: &
+      array1               ! first array to update
+
+   real (dbl_kind), dimension(:,:,:), intent(inout), optional :: &
+      array2, array3, array4, array5, array6   ! further arrays to update
+
+   real (dbl_kind), intent(in), optional :: &
+      fillValue            ! optional value to put in ghost cells
+
+   character(len=*), parameter :: subname = '(ice_HaloUpdate_multi)'
+
+   call update_one(1, array1)
+   if (present(array2)) call update_one(2, array2)
+   if (present(array3)) call update_one(3, array3)
+   if (present(array4)) call update_one(4, array4)
+   if (present(array5)) call update_one(5, array5)
+   if (present(array6)) call update_one(6, array6)
+
+   contains
+
+   subroutine update_one(karg, array)
+
+   integer (int_kind), intent(in) :: &
+      karg                 ! position of array in the argument list
+
+   real (dbl_kind), dimension(:,:,:), intent(inout) :: &
+      array                ! array to update
+
+   if (size(fieldLoc) < karg .or. size(fieldKind) < karg) then
+      call abort_ice(subname//'ERROR: fieldLoc/fieldKind shorter than array list')
+      return
+   endif
+
+   if (present(fillValue)) then
+      call ice_HaloUpdate2DR8(array, halo, fieldLoc(karg), fieldKind(karg), &
+                              fillValue=fillValue)
+   else
+      call ice_HaloUpdate2DR8(array, halo, fieldLoc(karg), fieldKind(karg))
+   endif
+
+   end subroutine update_one
+
+ end subroutine ice_HaloUpdate_multi
 
 !***********************************************************************
 

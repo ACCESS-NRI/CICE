@@ -263,7 +263,7 @@
           ice_HaloDestroy, ice_HaloUpdate_stress
       use ice_blocks, only: block, get_block, nx_block, ny_block, nghost
       use ice_domain, only: nblocks, blocks_ice, halo_info, maskhalo_dyn, &
-          ns_boundary_type
+          ns_boundary_type, halo_dynbundle
       use ice_domain_size, only: max_blocks, ncat
       use ice_flux, only: rdg_conv, rdg_shear, strairxT, strairyT, &
           strairxU, strairyU, uocn, vocn, ss_tltx, ss_tlty, fmU, &
@@ -294,7 +294,7 @@
           DminTarea, visc_method, deformations, deformationsC_T, deformationsCD_T, &
           strain_rates_U, dxhy, dyhx, cxp, cyp, cxm, cym, &
           iceTmask, iceUmask, iceEmask, iceNmask, &
-          dyn_haloUpdate, fld2, fld3, fld4
+          dyn_haloUpdate, dyn_haloUpdate_mixed, fld2, fld3, fld4
       use ice_dyn_evp1d, only: dyn_evp1d_run
 
       real (kind=dbl_kind), intent(in) :: &
@@ -1063,37 +1063,68 @@
             enddo
             !$OMP END PARALLEL DO
 
-            ! calls ice_haloUpdate, controls bundles and masks
-            call dyn_haloUpdate (halo_info,       halo_info_mask,    &
-                                 field_loc_Eface, field_type_vector, &
-                                 uvelE)
-            call dyn_haloUpdate (halo_info,       halo_info_mask,    &
-                                 field_loc_Nface, field_type_vector, &
-                                 vvelN)
+            if (halo_dynbundle) then
 
-            call grid_average_X2Y('A', uvelE, 'E', uvelN, 'N')
-            call grid_average_X2Y('A', vvelN, 'N', vvelE, 'E')
-            uvelN(:,:,:) = uvelN(:,:,:)*npm(:,:,:)
-            vvelE(:,:,:) = vvelE(:,:,:)*epm(:,:,:)
+               ! uvelE (E) and vvelN (N) in one round of messages
+               call dyn_haloUpdate_mixed (halo_info, halo_info_mask, &
+                    (/ field_loc_Eface, field_loc_Nface /),          &
+                    (/ field_type_vector, field_type_vector /),      &
+                    uvelE, vvelN)
 
-            ! calls ice_haloUpdate, controls bundles and masks
-            call dyn_haloUpdate (halo_info,       halo_info_mask,    &
-                                 field_loc_Nface, field_type_vector, &
-                                 uvelN)
-            call dyn_haloUpdate (halo_info,       halo_info_mask,    &
-                                 field_loc_Eface, field_type_vector, &
-                                 vvelE)
+               call grid_average_X2Y('A', uvelE, 'E', uvelN, 'N')
+               call grid_average_X2Y('A', vvelN, 'N', vvelE, 'E')
+               uvelN(:,:,:) = uvelN(:,:,:)*npm(:,:,:)
+               vvelE(:,:,:) = vvelE(:,:,:)*epm(:,:,:)
 
-            call grid_average_X2Y('A', uvelE, 'E', uvel, 'U')
-            call grid_average_X2Y('A', vvelN, 'N', vvel, 'U')
+               call grid_average_X2Y('A', uvelE, 'E', uvel, 'U')
+               call grid_average_X2Y('A', vvelN, 'N', vvel, 'U')
+               uvel(:,:,:) = uvel(:,:,:)*uvm(:,:,:)
+               vvel(:,:,:) = vvel(:,:,:)*uvm(:,:,:)
 
-            uvel(:,:,:) = uvel(:,:,:)*uvm(:,:,:)
-            vvel(:,:,:) = vvel(:,:,:)*uvm(:,:,:)
-            ! U fields at NE corner
-            ! calls ice_haloUpdate, controls bundles and masks
-            call dyn_haloUpdate (halo_info,          halo_info_mask,    &
-                                 field_loc_NEcorner, field_type_vector, &
-                                 uvel, vvel)
+               ! uvelN, vvelE, uvel and vvel are computed from uvelE and
+               ! vvelN only, so all four share one round of messages
+               call dyn_haloUpdate_mixed (halo_info, halo_info_mask,  &
+                    (/ field_loc_Nface, field_loc_Eface,              &
+                       field_loc_NEcorner, field_loc_NEcorner /),     &
+                    (/ field_type_vector, field_type_vector,          &
+                       field_type_vector, field_type_vector /),       &
+                    uvelN, vvelE, uvel, vvel)
+
+            else
+
+               ! calls ice_haloUpdate, controls bundles and masks
+               call dyn_haloUpdate (halo_info,       halo_info_mask,    &
+                                    field_loc_Eface, field_type_vector, &
+                                    uvelE)
+               call dyn_haloUpdate (halo_info,       halo_info_mask,    &
+                                    field_loc_Nface, field_type_vector, &
+                                    vvelN)
+
+               call grid_average_X2Y('A', uvelE, 'E', uvelN, 'N')
+               call grid_average_X2Y('A', vvelN, 'N', vvelE, 'E')
+               uvelN(:,:,:) = uvelN(:,:,:)*npm(:,:,:)
+               vvelE(:,:,:) = vvelE(:,:,:)*epm(:,:,:)
+
+               ! calls ice_haloUpdate, controls bundles and masks
+               call dyn_haloUpdate (halo_info,       halo_info_mask,    &
+                                    field_loc_Nface, field_type_vector, &
+                                    uvelN)
+               call dyn_haloUpdate (halo_info,       halo_info_mask,    &
+                                    field_loc_Eface, field_type_vector, &
+                                    vvelE)
+
+               call grid_average_X2Y('A', uvelE, 'E', uvel, 'U')
+               call grid_average_X2Y('A', vvelN, 'N', vvel, 'U')
+
+               uvel(:,:,:) = uvel(:,:,:)*uvm(:,:,:)
+               vvel(:,:,:) = vvel(:,:,:)*uvm(:,:,:)
+               ! U fields at NE corner
+               ! calls ice_haloUpdate, controls bundles and masks
+               call dyn_haloUpdate (halo_info,          halo_info_mask,    &
+                                    field_loc_NEcorner, field_type_vector, &
+                                    uvel, vvel)
+
+            endif
 
          enddo                     ! subcycling
 
