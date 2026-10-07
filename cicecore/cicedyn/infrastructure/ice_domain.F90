@@ -56,6 +56,7 @@
       halo_info          ! ghost cell update info
 
    character (char_len), public :: &
+      halo_dynbundle_opt, & ! 'auto' (heuristic), 'on' or 'off': bundle dynamics halo updates
       ew_boundary_type, &! type of domain bndy in each logical
       ns_boundary_type   !    direction (ew is i, ns is j)
 
@@ -142,6 +143,7 @@
                          maskhalo_dyn,      &
                          maskhalo_remap,    &
                          maskhalo_bound,    &
+                         halo_dynbundle_opt, &
                          add_mpi_barriers,  &
                          debug_blocks
 
@@ -162,6 +164,7 @@
    maskhalo_remap    = .false.     ! if true, use masked halos for transport
    maskhalo_bound    = .false.     ! if true, use masked halos for bound_state
    halo_dynbundle    = .true.      ! if true, bundle halo updates in dynamics
+   halo_dynbundle_opt = 'auto'     ! 'auto' keeps the nx_block*ny_block/nprocs heuristic
    add_mpi_barriers  = .false.     ! if true, throttle communication
    debug_blocks      = .false.     ! if true, print verbose block information
    max_blocks        = -1          ! max number of blocks per processor
@@ -216,6 +219,7 @@
    call broadcast_scalar(maskhalo_dyn,      master_task)
    call broadcast_scalar(maskhalo_remap,    master_task)
    call broadcast_scalar(maskhalo_bound,    master_task)
+   call broadcast_scalar(halo_dynbundle_opt, master_task)
    call broadcast_scalar(add_mpi_barriers,  master_task)
    call broadcast_scalar(debug_blocks,      master_task)
    call broadcast_scalar(max_blocks,        master_task)
@@ -292,6 +296,7 @@
      write(nu_diag,'(a,l6)')  '  maskhalo_dyn          = ', maskhalo_dyn
      write(nu_diag,'(a,l6)')  '  maskhalo_remap        = ', maskhalo_remap
      write(nu_diag,'(a,l6)')  '  maskhalo_bound        = ', maskhalo_bound
+     write(nu_diag,'(a,a)')   '  halo_dynbundle_opt    = ', trim(halo_dynbundle_opt)
      write(nu_diag,'(a,l6)')  '  add_mpi_barriers      = ', add_mpi_barriers
      write(nu_diag,'(a,l6)')  '  debug_blocks          = ', debug_blocks
      write(nu_diag,'(a,2i6)') '  block_size_x,_y       = ', block_size_x, block_size_y

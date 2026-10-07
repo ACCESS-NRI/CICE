@@ -267,7 +267,7 @@
 
       use ice_blocks, only: block, get_block
       use ice_boundary, only: ice_halo, ice_haloUpdate
-      use ice_domain, only: nblocks, halo_dynbundle, blocks_ice, halo_info, &
+      use ice_domain, only: nblocks, halo_dynbundle, halo_dynbundle_opt, blocks_ice, halo_info, &
           ns_boundary_type
       use ice_domain_size, only: max_blocks
       use ice_flux, only: &
@@ -306,10 +306,22 @@
       call set_evp_parameters (dt)
       ! allocate dyn shared (init_uvel,init_vvel)
       call alloc_dyn_shared
-      ! Set halo_dynbundle, this is empirical at this point, could become namelist
-      halo_dynbundle = .true.
-      nprocs = get_num_procs()
-      if (nx_block*ny_block/nprocs > 100) halo_dynbundle = .false.
+      ! Set halo_dynbundle.  'auto' is the historical empirical heuristic, unchanged.
+      ! ACCESS-NRI/CICE#53 measured bundling off to be faster in every 25 km
+      ! configuration tested, so it is exposed here rather than hard-wired.
+      select case (trim(halo_dynbundle_opt))
+      case ('on')
+         halo_dynbundle = .true.
+      case ('off')
+         halo_dynbundle = .false.
+      case ('auto')
+         halo_dynbundle = .true.
+         nprocs = get_num_procs()
+         if (nx_block*ny_block/nprocs > 100) halo_dynbundle = .false.
+      case default
+         call abort_ice(subname//' ERROR: halo_dynbundle_opt must be auto, on or off', &
+            file=__FILE__, line=__LINE__)
+      end select
 
       if (my_task == master_task) then
          write(nu_diag,*) 'dt  = ',dt
