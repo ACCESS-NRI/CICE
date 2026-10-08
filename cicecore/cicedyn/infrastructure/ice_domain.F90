@@ -57,6 +57,7 @@
 
    character (char_len), public :: &
       halo_dynbundle_opt, & ! 'auto' (heuristic), 'on' or 'off': bundle dynamics halo updates
+      cgrid_evp_halo,     & ! 'standard' or 'reduced' (3 exchange rounds per C-grid EVP subcycle)
       ew_boundary_type, &! type of domain bndy in each logical
       ns_boundary_type   !    direction (ew is i, ns is j)
 
@@ -144,6 +145,7 @@
                          maskhalo_remap,    &
                          maskhalo_bound,    &
                          halo_dynbundle_opt, &
+                         cgrid_evp_halo,    &
                          add_mpi_barriers,  &
                          debug_blocks
 
@@ -165,6 +167,7 @@
    maskhalo_bound    = .false.     ! if true, use masked halos for bound_state
    halo_dynbundle    = .true.      ! if true, bundle halo updates in dynamics
    halo_dynbundle_opt = 'auto'     ! 'auto' keeps the nx_block*ny_block/nprocs heuristic
+   cgrid_evp_halo    = 'standard'  ! 'reduced': 3 halo rounds per C-grid EVP subcycle
    add_mpi_barriers  = .false.     ! if true, throttle communication
    debug_blocks      = .false.     ! if true, print verbose block information
    max_blocks        = -1          ! max number of blocks per processor
@@ -220,6 +223,7 @@
    call broadcast_scalar(maskhalo_remap,    master_task)
    call broadcast_scalar(maskhalo_bound,    master_task)
    call broadcast_scalar(halo_dynbundle_opt, master_task)
+   call broadcast_scalar(cgrid_evp_halo,    master_task)
    call broadcast_scalar(add_mpi_barriers,  master_task)
    call broadcast_scalar(debug_blocks,      master_task)
    call broadcast_scalar(max_blocks,        master_task)
@@ -263,6 +267,11 @@
       call abort_ice(subname//' ERROR: Not enough ghost cells allocated', file=__FILE__, line=__LINE__)
    endif
 
+   if (trim(cgrid_evp_halo) /= 'standard' .and. trim(cgrid_evp_halo) /= 'reduced') then
+      call abort_ice(subname//' ERROR: cgrid_evp_halo must be standard or reduced', &
+         file=__FILE__, line=__LINE__)
+   endif
+
 !----------------------------------------------------------------------
 !
 !  compute block decomposition and details
@@ -297,6 +306,7 @@
      write(nu_diag,'(a,l6)')  '  maskhalo_remap        = ', maskhalo_remap
      write(nu_diag,'(a,l6)')  '  maskhalo_bound        = ', maskhalo_bound
      write(nu_diag,'(a,a)')   '  halo_dynbundle_opt    = ', trim(halo_dynbundle_opt)
+     write(nu_diag,'(a,a)')   '  cgrid_evp_halo        = ', trim(cgrid_evp_halo)
      write(nu_diag,'(a,l6)')  '  add_mpi_barriers      = ', add_mpi_barriers
      write(nu_diag,'(a,l6)')  '  debug_blocks          = ', debug_blocks
      write(nu_diag,'(a,2i6)') '  block_size_x,_y       = ', block_size_x, block_size_y

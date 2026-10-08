@@ -36,6 +36,7 @@
       module ice_dyn_evp
 
       use ice_kinds_mod
+      use ice_boundary, only: ice_halo
       use ice_communicate, only: my_task, master_task
       use ice_constants, only: field_loc_center, field_loc_NEcorner, &
           field_loc_Nface, field_loc_Eface, &
@@ -118,6 +119,12 @@
          umassdti (:,:,:)     ! mass of U-cell/dte (kg/m^2 s)
 
       public :: evp, init_evp
+
+      ! halo with only the tripole-seam messages, for cgrid_evp_halo = 'reduced'
+      type (ice_halo), save :: &
+         halo_info_seam
+      logical (kind=log_kind), save :: &
+         seam_halo_ready = .false.
 
 !=======================================================================
 
@@ -259,11 +266,11 @@
       subroutine evp (dt)
 
       use ice_arrays_column, only: Cdn_ocn
-      use ice_boundary, only: ice_halo, ice_HaloMask, ice_HaloUpdate, &
-          ice_HaloDestroy, ice_HaloUpdate_stress
+      use ice_boundary, only: ice_HaloMask, ice_HaloUpdate, &
+          ice_HaloDestroy, ice_HaloUpdate_stress, ice_HaloUpdate_multi
       use ice_blocks, only: block, get_block, nx_block, ny_block, nghost
       use ice_domain, only: nblocks, blocks_ice, halo_info, maskhalo_dyn, &
-          ns_boundary_type, halo_dynbundle
+          ns_boundary_type, halo_dynbundle, cgrid_evp_halo
       use ice_domain_size, only: max_blocks, ncat
       use ice_flux, only: rdg_conv, rdg_shear, strairxT, strairyT, &
           strairxU, strairyU, uocn, vocn, ss_tltx, ss_tlty, fmU, &
@@ -284,6 +291,7 @@
       use ice_grid, only: tmask, umask, umaskCD, nmask, emask, uvm, epm, npm, &
           dxE, dxN, dxT, dxU, dyE, dyN, dyT, dyU, &
           tarear, uarear, earear, narear, grid_average_X2Y, uarea, &
+          earea, narea, &
           grid_ice, grid_atm_dynu, grid_atm_dynv, grid_ocn_dynu, grid_ocn_dynv
       use ice_state, only: aice, aiU, vice, vsno, uvel, vvel, uvelN, vvelN, &
           uvelE, vvelE, divu, shear, vort, &
@@ -332,6 +340,14 @@
 
       integer (kind=int_kind), dimension (nx_block,ny_block,max_blocks) :: &
          halomask     ! generic halo mask
+
+      real (kind=dbl_kind), dimension (:,:,:), allocatable :: &
+         hdeliver     ! what the dynamics halo update does to each ghost cell:
+                      ! 1 copies a neighbour value, 0 fills zero, -1 leaves it
+
+      logical (kind=log_kind) :: &
+         lreduce, &   ! 3 exchange rounds per C-grid subcycle
+         lseam        ! tripole grid: seam exchanges needed
 
       type (ice_halo) :: &
          halo_info_mask !  ghost cell update info for masked halo
@@ -724,9 +740,23 @@
          vvel(:,:,:) = vvel(:,:,:)*uvm(:,:,:)
       endif
 
+      lreduce = (grid_ice == 'C' .and. trim(cgrid_evp_halo) == 'reduced' &
+                 .and. trim(evp_algorithm) == 'standard_2d')
+      lseam   = (trim(ns_boundary_type) == 'tripole' .or. &
+                 trim(ns_boundary_type) == 'tripoleT')
+
       call ice_timer_start(timer_bound)
-      call ice_HaloUpdate (strength,         halo_info, &
-                           field_loc_center, field_type_scalar)
+      if (lreduce) then
+         ! the old T stresses on the ghost ring are read by stressC_T on the
+         ! east and north ghost cells, so bring them up to date once here
+         call ice_HaloUpdate_multi (halo_info,                             &
+              (/ field_loc_center, field_loc_center, field_loc_center /),  &
+              (/ field_type_scalar, field_type_scalar, field_type_scalar /), &
+              strength, stresspT, stressmT)
+      else
+         call ice_HaloUpdate (strength,         halo_info, &
+                              field_loc_center, field_type_scalar)
+      endif
 
       ! velocities may have changed in dyn_prep2
       call stack_fields(uvel, vvel, fld2)
@@ -766,6 +796,33 @@
                               field_loc_center, field_type_scalar)
          call ice_timer_stop(timer_bound)
          call ice_HaloMask(halo_info_mask, halo_info, halomask)
+      endif
+
+      if (lreduce) then
+         call ice_timer_start(timer_bound)
+         ! what the dynamics halo update delivers to each ghost cell:
+         ! update a marker that is 1 inside every block and -1 elsewhere
+         allocate(hdeliver(nx_block,ny_block,max_blocks))
+         hdeliver(:,:,:) = -c1
+         do iblk = 1, nblocks
+            this_block = get_block(blocks_ice(iblk),iblk)
+            hdeliver(this_block%ilo:this_block%ihi, &
+                     this_block%jlo:this_block%jhi, iblk) = c1
+         enddo
+         if (maskhalo_dyn) then
+            call ice_HaloUpdate (hdeliver, halo_info_mask, &
+                                 field_loc_center, field_type_scalar)
+         else
+            call ice_HaloUpdate (hdeliver, halo_info, &
+                                 field_loc_center, field_type_scalar)
+         endif
+         ! halo with only the tripole messages (ice_HaloMask always keeps them)
+         if (lseam .and. .not. seam_halo_ready) then
+            halomask = 0
+            call ice_HaloMask(halo_info_seam, halo_info, halomask)
+            seam_halo_ready = .true.
+         endif
+         call ice_timer_stop(timer_bound)
       endif
 
       !-----------------------------------------------------------------
@@ -982,10 +1039,25 @@
             enddo
             !$OMP END PARALLEL DO
 
-            ! calls ice_haloUpdate, controls bundles and masks
-            call dyn_haloUpdate (halo_info,        halo_info_mask,    &
-                                 field_loc_center, field_type_scalar, &
-                                 zetax2T, etax2T, stresspT, stressmT)
+            if (lreduce) then
+               ! stressC_T has filled the east and north ghost cells, the only
+               ! ones read below; only the tripole fold rows need messages
+               if (lseam) then
+                  call ice_timer_start(timer_bound)
+                  call ice_HaloUpdate_multi (halo_info_seam,                       &
+                       (/ field_loc_center, field_loc_center,                    &
+                          field_loc_center, field_loc_center /),                 &
+                       (/ field_type_scalar, field_type_scalar,                  &
+                          field_type_scalar, field_type_scalar /),               &
+                       zetax2T, etax2T, stresspT, stressmT, tripoleOnly=.true.)
+                  call ice_timer_stop(timer_bound)
+               endif
+            else
+               ! calls ice_haloUpdate, controls bundles and masks
+               call dyn_haloUpdate (halo_info,        halo_info_mask,    &
+                                    field_loc_center, field_type_scalar, &
+                                    zetax2T, etax2T, stresspT, stressmT)
+            endif
 
             if (visc_method == 'avg_strength') then
                call grid_average_X2Y('S', strength, 'T', strengthU, 'U')
@@ -1063,7 +1135,42 @@
             enddo
             !$OMP END PARALLEL DO
 
-            if (halo_dynbundle) then
+            if (lreduce) then
+
+               ! uvelE (E) and vvelN (N) in one round of messages
+               call dyn_haloUpdate_mixed (halo_info, halo_info_mask, &
+                    (/ field_loc_Eface, field_loc_Nface /),          &
+                    (/ field_type_vector, field_type_vector /),      &
+                    uvelE, vvelN)
+
+               call grid_average_X2Y('A', uvelE, 'E', uvelN, 'N')
+               call grid_average_X2Y('A', vvelN, 'N', vvelE, 'E')
+               uvelN(:,:,:) = uvelN(:,:,:)*npm(:,:,:)
+               vvelE(:,:,:) = vvelE(:,:,:)*epm(:,:,:)
+
+               call grid_average_X2Y('A', uvelE, 'E', uvel, 'U')
+               call grid_average_X2Y('A', vvelN, 'N', vvel, 'U')
+               uvel(:,:,:) = uvel(:,:,:)*uvm(:,:,:)
+               vvel(:,:,:) = vvel(:,:,:)*uvm(:,:,:)
+
+               ! the loop reads only uvelN on the east ghost column and vvelE
+               ! on the north ghost row: compute what the halo would deliver
+               call cgrid_ghost_vel (hdeliver, uvelE, vvelN, earea, narea, &
+                                     npm, epm, uvelN, vvelE)
+               ! after the last subcycle the full exchange below does the seam
+               ! (a second fold would flip the sign of the pole points of uvel, vvel)
+               if (lseam .and. ksub < ndte) then
+                  call ice_timer_start(timer_bound)
+                  call ice_HaloUpdate_multi (halo_info_seam,                    &
+                       (/ field_loc_Nface, field_loc_Eface,                   &
+                          field_loc_NEcorner, field_loc_NEcorner /),          &
+                       (/ field_type_vector, field_type_vector,               &
+                          field_type_vector, field_type_vector /),            &
+                       uvelN, vvelE, uvel, vvel, tripoleOnly=.true.)
+                  call ice_timer_stop(timer_bound)
+               endif
+
+            elseif (halo_dynbundle) then
 
                ! uvelE (E) and vvelN (N) in one round of messages
                call dyn_haloUpdate_mixed (halo_info, halo_info_mask, &
@@ -1127,6 +1234,21 @@
             endif
 
          enddo                     ! subcycling
+
+         if (lreduce) then
+            ! restore every ghost value the standard subcycle leaves behind
+            call dyn_haloUpdate_mixed (halo_info, halo_info_mask,                &
+                 (/ field_loc_center, field_loc_center,                        &
+                    field_loc_center, field_loc_center,                        &
+                    field_loc_Nface, field_loc_Eface,                          &
+                    field_loc_NEcorner, field_loc_NEcorner /),                 &
+                 (/ field_type_scalar, field_type_scalar,                      &
+                    field_type_scalar, field_type_scalar,                      &
+                    field_type_vector, field_type_vector,                      &
+                    field_type_vector, field_type_vector /),                   &
+                 zetax2T, etax2T, stresspT, stressmT, uvelN, vvelE, uvel, vvel)
+            deallocate(hdeliver)
+         endif
 
          !-----------------------------------------------------------------
          ! save quantities for mechanical redistribution
@@ -1917,6 +2039,103 @@
       enddo                     ! ij
 
       end subroutine stressC_T
+
+!=======================================================================
+! Values the C-grid velocity halo update (field_loc_Nface for uvelN,
+! field_loc_Eface for vvelE) would put on the east ghost column of uvelN
+! and on the north ghost row of vvelE, the only ghost cells of these
+! fields read inside the subcycle loop.  The averages repeat the 'NW' and
+! 'SE' area averages of grid_average_X2YA term for term, followed by the
+! same mask multiplication, and the marker hdeliver reproduces the halo's
+! treatment of each ghost cell (copy, zero fill, or left as is).  Tripole
+! fold rows are handled separately by a seam exchange.
+
+      subroutine cgrid_ghost_vel (hdeliver, uvelE, vvelN, earea, narea, &
+                                  npm, epm, uvelN, vvelE)
+
+      use ice_blocks, only: block, get_block, nx_block, ny_block
+      use ice_domain, only: nblocks, blocks_ice
+      use ice_domain_size, only: max_blocks
+
+      real (kind=dbl_kind), dimension (nx_block,ny_block,max_blocks), intent(in) :: &
+         hdeliver , & ! 1 copy, 0 fill, -1 untouched by the halo update
+         uvelE    , & ! x-velocity at E points, halo updated
+         vvelN    , & ! y-velocity at N points, halo updated
+         earea    , & ! area of E cells
+         narea    , & ! area of N cells
+         npm      , & ! N-point mask
+         epm          ! E-point mask
+
+      real (kind=dbl_kind), dimension (nx_block,ny_block,max_blocks), intent(inout) :: &
+         uvelN    , & ! x-velocity averaged to N points
+         vvelE        ! y-velocity averaged to E points
+
+      ! local variables
+
+      integer (kind=int_kind) :: &
+         iblk, i, j, ilo, ihi, jlo, jhi
+
+      real (kind=dbl_kind) :: &
+         wtmp, work
+
+      type (block) :: &
+         this_block
+
+      character(len=*), parameter :: subname = '(cgrid_ghost_vel)'
+
+      !$OMP PARALLEL DO PRIVATE(iblk,i,j,ilo,ihi,jlo,jhi,this_block,wtmp,work)
+      do iblk = 1, nblocks
+         this_block = get_block(blocks_ice(iblk),iblk)
+         ilo = this_block%ilo
+         ihi = this_block%ihi
+         jlo = this_block%jlo
+         jhi = this_block%jhi
+
+         ! uvelN, east ghost column: E2N area average ('NW') times npm
+         i = ihi + 1
+         do j = jlo, jhi
+            if (hdeliver(i,j,iblk) > p5) then
+               work = c0
+               wtmp = (earea(i-1,j  ,iblk)  &
+                     + earea(i  ,j  ,iblk)  &
+                     + earea(i-1,j+1,iblk)  &
+                     + earea(i  ,j+1,iblk))
+               if (wtmp /= c0) &
+               work = (uvelE(i-1,j  ,iblk)*earea(i-1,j  ,iblk)  &
+                     + uvelE(i  ,j  ,iblk)*earea(i  ,j  ,iblk)  &
+                     + uvelE(i-1,j+1,iblk)*earea(i-1,j+1,iblk)  &
+                     + uvelE(i  ,j+1,iblk)*earea(i  ,j+1,iblk)) &
+                     / wtmp
+               uvelN(i,j,iblk) = work*npm(i,j,iblk)
+            elseif (hdeliver(i,j,iblk) > -p5) then
+               uvelN(i,j,iblk) = c0
+            endif
+         enddo
+
+         ! vvelE, north ghost row: N2E area average ('SE') times epm
+         j = jhi + 1
+         do i = ilo, ihi
+            if (hdeliver(i,j,iblk) > p5) then
+               work = c0
+               wtmp = (narea(i  ,j-1,iblk)  &
+                     + narea(i+1,j-1,iblk)  &
+                     + narea(i  ,j  ,iblk)  &
+                     + narea(i+1,j  ,iblk))
+               if (wtmp /= c0) &
+               work = (vvelN(i  ,j-1,iblk)*narea(i  ,j-1,iblk)  &
+                     + vvelN(i+1,j-1,iblk)*narea(i+1,j-1,iblk)  &
+                     + vvelN(i  ,j  ,iblk)*narea(i  ,j  ,iblk)  &
+                     + vvelN(i+1,j  ,iblk)*narea(i+1,j  ,iblk)) &
+                     / wtmp
+               vvelE(i,j,iblk) = work*epm(i,j,iblk)
+            elseif (hdeliver(i,j,iblk) > -p5) then
+               vvelE(i,j,iblk) = c0
+            endif
+         enddo
+      enddo
+      !$OMP END PARALLEL DO
+
+      end subroutine cgrid_ghost_vel
 
 !=======================================================================
 !

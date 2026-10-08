@@ -1732,9 +1732,10 @@ contains
 
  subroutine ice_HaloUpdate_multi(halo, fieldLoc, fieldKind,      &
                                  array1, array2, array3, array4, &
-                                 array5, array6, fillValue)
+                                 array5, array6, array7, array8, &
+                                 fillValue, tripoleOnly)
 
-!  This routine updates ghost cells for up to six 2d double precision
+!  This routine updates ghost cells for up to eight 2d double precision
 !  arrays in a single round of messages (one message per neighbour
 !  task).  Each array has its own field location and kind, so fields
 !  on different grids (e.g. the Eface and Nface velocities of the
@@ -1750,6 +1751,11 @@ contains
 !
 !  fieldLoc(k) and fieldKind(k) describe arrayk.  Arrays passed must
 !  be distinct (no aliasing).
+!
+!  With tripoleOnly = .true. only the tripole seam is processed, exactly
+!  as ice_HaloUpdate2DR8 does with tripoleOnly: no outer fill, local
+!  copies and received values go only to the tripole buffer, and only
+!  the cells written from the tripole buffer change.
 
    type (ice_halo), intent(in) :: &
       halo                 ! precomputed halo structure containing all
@@ -1765,13 +1771,17 @@ contains
       array1               ! first array to update
 
    real (dbl_kind), dimension(:,:,:), intent(inout), target, contiguous, optional :: &
-      array2, array3, array4, array5, array6   ! further arrays to update
+      array2, array3, array4, array5, &
+      array6, array7, array8   ! further arrays to update
 
    real (dbl_kind), intent(in), optional :: &
       fillValue            ! optional value to put in ghost cells
                            !  where neighbor points are unknown
                            !  (e.g. eliminated land blocks or
                            !   closed boundaries)
+
+   logical (log_kind), intent(in), optional :: &
+      tripoleOnly          ! only update across the tripole seam
 
 !-----------------------------------------------------------------------
 !
@@ -1780,7 +1790,7 @@ contains
 !-----------------------------------------------------------------------
 
    integer (int_kind), parameter :: &
-      maxfld = 6           ! maximum number of arrays per call
+      maxfld = 8           ! maximum number of arrays per call
 
    type :: r8ptr3d
       real (dbl_kind), dimension(:,:,:), pointer, contiguous :: p
@@ -1823,7 +1833,8 @@ contains
    logical (log_kind) :: &
       ewfillouter,     &! fill outer boundary ew
       nsfillouter,     &! fill outer boundary ns
-      ltripole          ! this task copies values out of the tripole buffer
+      ltripole,        &! this task copies values out of the tripole buffer
+      ltripOnly         ! local tripoleOnly value
 
    integer (int_kind) ::  len  ! length of messages
 
@@ -1843,6 +1854,8 @@ contains
    if (present(array4)) call add_field(4, array4)
    if (present(array5)) call add_field(5, array5)
    if (present(array6)) call add_field(6, array6)
+   if (present(array7)) call add_field(7, array7)
+   if (present(array8)) call add_field(8, array8)
 
    if (nfld == 0) return
 
@@ -1869,6 +1882,9 @@ contains
    else
       fill = 0.0_dbl_kind
    endif
+
+   ltripOnly = .false.
+   if (present(tripoleOnly)) ltripOnly = tripoleOnly
 
    !*** the tripole buffer is only read back through local copies with
    !*** srcBlock < 0, so tasks without such copies skip all tripole work
@@ -2004,6 +2020,8 @@ contains
 
    ! fill outer boundary as needed
    ! only fill corners if both edges are being filled
+   ! (tripoleOnly: no fill, only the seam is updated)
+   if (.not. ltripOnly) then
    do iblk = 1, halo%numLocalBlocks
       call get_block_parameter(halo%blockGlobalID(iblk),     &
                                ilo=ilo,       ihi=ihi,       &
@@ -2064,6 +2082,7 @@ contains
       endif
       enddo ! k
    enddo ! iblk
+   endif ! ltripOnly
 
 !-----------------------------------------------------------------------
 !
@@ -2085,17 +2104,19 @@ contains
 
       if (srcBlock > 0) then
          if (dstBlock > 0) then
+            if (.not. ltripOnly) then
             do k = 1, nfld
                fld(k)%p(iDst,jDst,dstBlock) = &
                fld(k)%p(iSrc,jSrc,srcBlock)
             enddo
+            endif
          else if (dstBlock < 0 .and. ltripole) then ! tripole copy into buffer
             do k = 1, nfld
                bufTripoleR8M(iDst,jDst,k) = &
                fld(k)%p(iSrc,jSrc,srcBlock)
             enddo
          endif
-      else if (srcBlock == 0) then
+      else if (srcBlock == 0 .and. .not. ltripOnly) then
          do k = 1, nfld
             fld(k)%p(iDst,jDst,dstBlock) = fill
          enddo
@@ -2120,7 +2141,7 @@ contains
             jDst     = halo%recvAddr(2,n,nmsg)
             dstBlock = halo%recvAddr(3,n,nmsg)
 
-            if (dstBlock > 0) then
+            if (dstBlock > 0 .and. .not. ltripOnly) then
                fld(k)%p(iDst,jDst,dstBlock) = bufRecvR8M(ioff+n,nmsg)
             else if (dstBlock < 0 .and. ltripole) then !tripole
                bufTripoleR8M(iDst,jDst,k) = bufRecvR8M(ioff+n,nmsg)

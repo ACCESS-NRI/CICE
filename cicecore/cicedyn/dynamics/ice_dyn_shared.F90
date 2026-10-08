@@ -2805,12 +2805,12 @@
       end subroutine dyn_haloUpdate5
 
 !=======================================================================
-! Do a halo update on 2 to 6 fields that may have different locations
+! Do a halo update on 2 to 8 fields that may have different locations
 ! and types, in one round of messages (no stack/unstack copies).
 ! Results are identical to updating each field on its own.
 
       subroutine dyn_haloUpdate_mixed(halo_info, halo_info_mask, field_loc, field_type, &
-                                      fld1, fld2, fld3, fld4, fld5, fld6)
+                                      fld1, fld2, fld3, fld4, fld5, fld6, fld7, fld8)
 
       use ice_boundary, only: ice_halo, ice_HaloUpdate_multi
       use ice_domain, only: maskhalo_dyn
@@ -2829,7 +2829,7 @@
          fld2            !
 
       real (kind=dbl_kind), dimension (nx_block,ny_block,max_blocks), intent(inout), optional :: &
-         fld3, fld4, fld5, fld6  ! further fields to halo
+         fld3, fld4, fld5, fld6, fld7, fld8  ! further fields to halo
 
       ! local variables
 
@@ -2838,10 +2838,10 @@
       call ice_timer_start(timer_bound)
       if (maskhalo_dyn) then
          call ice_HaloUpdate_multi (halo_info_mask, field_loc, field_type, &
-                                    fld1, fld2, fld3, fld4, fld5, fld6)
+                                    fld1, fld2, fld3, fld4, fld5, fld6, fld7, fld8)
       else
          call ice_HaloUpdate_multi (halo_info     , field_loc, field_type, &
-                                    fld1, fld2, fld3, fld4, fld5, fld6)
+                                    fld1, fld2, fld3, fld4, fld5, fld6, fld7, fld8)
       endif
       call ice_timer_stop(timer_bound)
 

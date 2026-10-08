@@ -1061,7 +1061,8 @@ contains
 
  subroutine ice_HaloUpdate_multi(halo, fieldLoc, fieldKind,      &
                                  array1, array2, array3, array4, &
-                                 array5, array6, fillValue)
+                                 array5, array6, array7, array8, &
+                                 fillValue, tripoleOnly)
 
 !  Multi-array version of ice_HaloUpdate for 2d double precision
 !  arrays, with a field location and kind per array (see the mpi
@@ -1081,10 +1082,14 @@ contains
       array1               ! first array to update
 
    real (dbl_kind), dimension(:,:,:), intent(inout), optional :: &
-      array2, array3, array4, array5, array6   ! further arrays to update
+      array2, array3, array4, array5, &
+      array6, array7, array8   ! further arrays to update
 
    real (dbl_kind), intent(in), optional :: &
       fillValue            ! optional value to put in ghost cells
+
+   logical (log_kind), intent(in), optional :: &
+      tripoleOnly          ! only update across the tripole seam
 
    character(len=*), parameter :: subname = '(ice_HaloUpdate_multi)'
 
@@ -1094,6 +1099,8 @@ contains
    if (present(array4)) call update_one(4, array4)
    if (present(array5)) call update_one(5, array5)
    if (present(array6)) call update_one(6, array6)
+   if (present(array7)) call update_one(7, array7)
+   if (present(array8)) call update_one(8, array8)
 
    contains
 
@@ -1112,9 +1119,10 @@ contains
 
    if (present(fillValue)) then
       call ice_HaloUpdate2DR8(array, halo, fieldLoc(karg), fieldKind(karg), &
-                              fillValue=fillValue)
+                              fillValue=fillValue, tripoleOnly=tripoleOnly)
    else
-      call ice_HaloUpdate2DR8(array, halo, fieldLoc(karg), fieldKind(karg))
+      call ice_HaloUpdate2DR8(array, halo, fieldLoc(karg), fieldKind(karg), &
+                              tripoleOnly=tripoleOnly)
    endif
 
    end subroutine update_one
