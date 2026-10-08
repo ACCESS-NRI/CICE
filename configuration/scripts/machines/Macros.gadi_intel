@@ -52,7 +52,10 @@ endif
 ifeq ($(ICE_THREADED), true) 
    LDFLAGS += -qopenmp 
    CFLAGS += -qopenmp 
-   FFLAGS += -qopenmp 
+   FFLAGS += -qopenmp
+else
+   # honour !$omp simd / declare simd directives without OpenMP threading
+   FFLAGS += -qopenmp-simd
 endif
 
 ifeq ($(ICE_IOTYPE), pio1)

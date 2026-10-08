@@ -68,6 +68,16 @@ else()
   message(WARNING "Fortran compiler with ID ${CMAKE_Fortran_COMPILER_ID} will be used with CMake default options")
 endif()
 
+# Honour !$omp simd / !$omp declare simd directives without OpenMP threading
+# (with CICE_OPENMP=ON the OpenMP flags already enable them)
+if(NOT CICE_OPENMP)
+  if(CMAKE_Fortran_COMPILER_ID MATCHES "GNU")
+    set(CMAKE_Fortran_FLAGS "${CMAKE_Fortran_FLAGS} -fopenmp-simd")
+  elseif(CMAKE_Fortran_COMPILER_ID MATCHES "Intel")
+    set(CMAKE_Fortran_FLAGS "${CMAKE_Fortran_FLAGS} -qopenmp-simd")
+  endif()
+endif()
+
 if(CMAKE_C_COMPILER_ID MATCHES "GNU")
   set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -std=gnu99 -g -grecord-gcc-switches")
   set(CMAKE_C_FLAGS_RELEASE "-O")
