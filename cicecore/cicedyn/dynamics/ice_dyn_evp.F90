@@ -1532,7 +1532,6 @@
 
       str(:,:,:) = c0
 
-      ! each cell appears at most once in the index list, so iterations are independent
       !$omp simd private(i, j, divune, divunw, divuse, divusw, tensionne, tensionnw, tensionse, &
       !$omp& tensionsw, shearne, shearnw, shearse, shearsw, Deltane, Deltanw, Deltase, Deltasw, &
       !$omp& zetax2ne, zetax2nw, zetax2se, zetax2sw, etax2ne, etax2nw, etax2se, etax2sw, rep_prsne, &
@@ -1836,7 +1835,6 @@
                            dxT   (:,:), dyT     (:,:), &
                            divT  (:,:), tensionT(:,:))
 
-      ! each cell appears at most once in the index list, so iterations are independent
       !$omp simd private(i, j, uareaavgr, shearTsqr, shearT, DeltaT, rep_prsT)
       do ij = 1, icellT
          i = indxTi(ij)
@@ -1952,7 +1950,6 @@
       !-----------------------------------------------------------------
 
       if (visc_method == 'avg_zeta') then
-         ! each cell appears at most once in the index list, so iterations are independent
          !$omp simd private(i, j)
          do ij = 1, icellU
             i = indxUi(ij)
@@ -1962,7 +1959,6 @@
          enddo
 
       elseif (visc_method == 'avg_strength') then
-         ! each cell appears at most once in the index list, so iterations are independent
          !$omp simd private(i, j, DminUarea, lzetax2U, letax2U, lrep_prsU)
          do ij = 1, icellU
             i = indxUi(ij)

@@ -1363,7 +1363,6 @@
       enddo
       enddo
 
-      ! each cell appears at most once in the index list, so iterations are independent
       !$omp simd private(i, j, phi_nw, phi_n, phi_ne, phi_w, phi_e, phi_sw, phi_s, phi_se, gxtmp, &
       !$omp& gytmp, pmn, pmx, w1, w2, w3, w4, qmn, qmx)
       do ij = 1, icells
@@ -2989,7 +2988,6 @@
       if (trim(edge) == 'north') then
          do ng = 1, ngroups
             do nv = 1, nvert
-               ! each cell appears at most once in the index list, so iterations are independent
                !$omp simd private(i, j, ishift, jshift)
                do ij = 1, icells(ng)
                   i = indxi(ij,ng)
@@ -3004,7 +3002,6 @@
       else                      ! east edge
          do ng = 1, ngroups
             do nv = 1, nvert
-               ! each cell appears at most once in the index list, so iterations are independent
                !$omp simd private(i, j, ishift, jshift, w1)
                do ij = 1, icells(ng)
                   i = indxi(ij,ng)
@@ -3127,7 +3124,6 @@
       elseif (integral_order == 2) then ! quadratic (3-point formula)
 
          do ng = 1, ngroups
-         ! each cell appears at most once in the index list, so iterations are independent
          !$omp simd private(i, j)
          do ij = 1, icells(ng)
             i = indxi(ij,ng)
@@ -3156,7 +3152,6 @@
       else                      ! cubic (4-point formula)
 
          do ng = 1, ngroups
-         ! each cell appears at most once in the index list, so iterations are independent
          !$omp simd private(i, j)
          do ij = 1, icells(ng)
             i = indxi(ij,ng)
@@ -3288,7 +3283,6 @@
 
          if (integral_order == 1) then  ! linear (1-point formula)
 
-            ! each cell appears at most once in the index list, so iterations are independent
             !$omp simd private(i, j, i2, j2, m0)
             do ij = 1, icells(ng)
                i = indxi(ij,ng)
@@ -3315,7 +3309,6 @@
 
          elseif (integral_order == 2) then  ! quadratic (3-point formula)
 
-            ! each cell appears at most once in the index list, so iterations are independent
             !$omp simd private(i, j, i2, j2, m1, m2, m3, w1, w2, w3)
             do ij = 1, icells(ng)
                i = indxi(ij,ng)
@@ -3418,7 +3411,6 @@
             do nt = 1, ntrace
                if (tracer_type(nt)==1) then ! does not depend on another tracer
 
-                  ! each cell appears at most once in the index list, so iterations are independent
                   !$omp simd private(i, j, i2, j2)
                   do ij = 1, icells(ng)
                      i = indxi(ij,ng)
@@ -3448,7 +3440,6 @@
                elseif (tracer_type(nt)==2) then ! depends on another tracer
                   nt1 = depend(nt)
 
-                  ! index list cells are unique and depend(nt) /= nt, so iterations are independent
                   !$omp simd private(i, j, i2, j2)
                   do ij = 1, icells(ng)
                      i = indxi(ij,ng)
@@ -3469,7 +3460,6 @@
                elseif (tracer_type(nt)==3) then ! depends on two tracers
                   nt1 = depend(nt)
 
-                  ! index list cells are unique and depend(nt) /= nt, so iterations are independent
                   !$omp simd private(i, j, i2, j2)
                   do ij = 1, icells(ng)
                      i = indxi(ij,ng)
@@ -3672,7 +3662,6 @@
             elseif (tracer_type(nt)==2) then ! depends on another tracer
                nt1 = depend(nt)
 
-               ! index list cells are unique and depend(nt) /= nt, so iterations are independent
                !$omp simd private(i, j, w1)
                do ij = 1, icells
                   i = indxi(ij)
@@ -3691,7 +3680,6 @@
                nt1 = depend(nt)
                nt2 = depend(nt1)
 
-               ! index list cells are unique and depend(nt) /= nt, so iterations are independent
                !$omp simd private(i, j, w1)
                do ij = 1, icells
                   i = indxi(ij)

@@ -922,7 +922,6 @@
       if (icepack_warnings_aborted()) call abort_ice(error_message=subname, &
          file=__FILE__, line=__LINE__)
 
-      ! each cell appears at most once in the index list, so iterations are independent
       !$omp simd private(i, j, uold, vold, vrel, cca, ccb, ab2, cc1, cc2, taux, tauy, Cb)
       do ij =1, icellU
          i = indxUi(ij)
@@ -1151,7 +1150,6 @@
       if (icepack_warnings_aborted()) call abort_ice(error_message=subname, &
          file=__FILE__, line=__LINE__)
 
-      ! each cell appears at most once in the index list, so iterations are independent
       !$omp simd private(i, j, uold, vold, vrel, taux, ccc, Cb, cca, ccb, cc1)
       do ij =1, icell
          i = indxi(ij)
@@ -1252,7 +1250,6 @@
       if (icepack_warnings_aborted()) call abort_ice(error_message=subname, &
          file=__FILE__, line=__LINE__)
 
-      ! each cell appears at most once in the index list, so iterations are independent
       !$omp simd private(i, j, uold, vold, vrel, tauy, ccc, Cb, cca, ccb, cc2)
       do ij =1, icell
          i = indxi(ij)
@@ -2390,7 +2387,6 @@
       shearU  (:,:) = c0
       deltaU  (:,:) = c0
 
-      ! each cell appears at most once in the index list, so iterations are independent
       !$omp simd private(i, j, uNip1j, uNij, vEijp1, vEij, uEijp1, uEij, vNip1j, vNij)
       do ij = 1, icellU
          i = indxUi(ij)
