@@ -1,0 +1,29 @@
+[1mdiff --git a/cicecore/cicedyn/general/ice_init.F90 b/cicecore/cicedyn/general/ice_init.F90[m
+[1mindex 5775cfb..17c41c5 100644[m
+[1m--- a/cicecore/cicedyn/general/ice_init.F90[m
+[1m+++ b/cicecore/cicedyn/general/ice_init.F90[m
+[36m@@ -158,7 +158,6 @@[m [msubroutine input_data[m
+         sw_frac, sw_dtemp, floediam, c_weld, wavefrac_min_sig_ht, &[m
+         critical_strain, critical_probability, mean_ln_slope, var_ln_const, &[m
+         hfrazilmin, iceruf, iceruf_ocn, &[m
+[31m-        sw_frac, sw_dtemp, floediam, c_weld, hfrazilmin, iceruf, iceruf_ocn, &[m
+         rsnw_fall, rsnw_tmax, rhosnew, rhosmin, rhosmax, Tliquidus_max, &[m
+         windmin, drhosdwind, snwlvlfac, tscale_pnd_drain, itd_area_min, itd_mass_min[m
+ [m
+[36m@@ -2910,9 +2909,6 @@[m [msubroutine input_data[m
+          critical_strain_in=critical_strain, critical_probability_in=critical_probability, &[m
+          mean_ln_slope_in=mean_ln_slope, var_ln_const_in=var_ln_const, weld_method_in=weld_method, &[m
+          wave_dep_welding_in=wave_dep_welding, hfrazilmin_in=hfrazilmin, Tliquidus_max_in=Tliquidus_max, &[m
+[31m-         floediam_in=floediam, c_weld_in=c_weld, hfrazilmin_in=hfrazilmin, Tliquidus_max_in=Tliquidus_max, &[m
+[31m-         floediam_in=floediam, c_weld_in=c_weld, weld_method_in=weld_method, &[m
+[31m-         wave_dep_welding_in=wave_dep_welding, hfrazilmin_in=hfrazilmin, Tliquidus_max_in=Tliquidus_max, &[m
+          aspect_rapid_mode_in=aspect_rapid_mode, dSdt_slow_mode_in=dSdt_slow_mode, &[m
+          phi_c_slow_mode_in=phi_c_slow_mode, phi_i_mushy_in=phi_i_mushy, conserv_check_in=conserv_check, &[m
+          wave_spec_type_in = wave_spec_type, wave_spec_in=wave_spec, nfreq_in=nfreq, &[m
+[1mdiff --git a/icepack b/icepack[m
+[1mindex ec5bc1e..6798545 160000[m
+[1m--- a/icepack[m
+[1m+++ b/icepack[m
+[36m@@ -1 +1 @@[m
+[31m-Subproject commit ec5bc1e1c7c5be30c589b4d3015401c8f744cb43[m
+[32m+[m[32mSubproject commit 679854578efc793acb08802703b9af44b9c6ea7b[m
