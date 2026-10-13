@@ -2083,6 +2083,8 @@
 !
 ! 2019: subroutine created by Philippe Blain, ECCC
 
+      ! inline into the vectorised loop in stress (ice_dyn_evp); needs IPO/LTO across modules
+      !DIR$ ATTRIBUTES FORCEINLINE :: strain_rates
       subroutine strain_rates (nx_block,   ny_block,   &
                                i,          j,          &
                                uvel,       vvel,       &
@@ -2097,8 +2099,6 @@
                                shearse,    shearsw,    &
                                Deltane,    Deltanw,    &
                                Deltase,    Deltasw     )
-      ! inline into the vectorised loop in stress (ice_dyn_evp); needs IPO/LTO across modules
-      !DIR$ ATTRIBUTES FORCEINLINE :: strain_rates
 
       integer (kind=int_kind), intent(in) :: &
          nx_block, ny_block    ! block dimensions
