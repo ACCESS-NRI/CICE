@@ -1894,14 +1894,13 @@
 
       write(nu_diag,*) 'uvel(i,j)',uvel(i,j,iblk)
       write(nu_diag,*) 'vvel(i,j)',vvel(i,j,iblk)
-      if (grid_ice == 'C') then
-         write(nu_diag,*) 'uvelE(i,j)',uvelE(i,j,iblk)
-         write(nu_diag,*) 'uvelN(i,j)',uvelN(i,j,iblk)
-      elseif (grid_ice == 'CD') then
+      if (grid_ice == 'C' .or. grid_ice == 'CD') then
          write(nu_diag,*) 'uvelE(i,j)',uvelE(i,j,iblk)
          write(nu_diag,*) 'vvelE(i,j)',vvelE(i,j,iblk)
          write(nu_diag,*) 'uvelN(i,j)',uvelN(i,j,iblk)
          write(nu_diag,*) 'vvelN(i,j)',vvelN(i,j,iblk)
+         write(nu_diag,*) 'uvelE(i-1,j)',uvelE(i-1,j,iblk)
+         write(nu_diag,*) 'vvelN(i,j-1)',vvelN(i,j-1,iblk)
       endif
 
       write(nu_diag,*) ' '
