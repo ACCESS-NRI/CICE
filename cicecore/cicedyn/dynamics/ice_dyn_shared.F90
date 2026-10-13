@@ -922,6 +922,7 @@
       if (icepack_warnings_aborted()) call abort_ice(error_message=subname, &
          file=__FILE__, line=__LINE__)
 
+      !$omp simd private(i, j, uold, vold, vrel, cca, ccb, ab2, cc1, cc2, taux, tauy, Cb)
       do ij =1, icellU
          i = indxUi(ij)
          j = indxUj(ij)
@@ -1149,6 +1150,7 @@
       if (icepack_warnings_aborted()) call abort_ice(error_message=subname, &
          file=__FILE__, line=__LINE__)
 
+      !$omp simd private(i, j, uold, vold, vrel, taux, ccc, Cb, cca, ccb, cc1)
       do ij =1, icell
          i = indxi(ij)
          j = indxj(ij)
@@ -1248,6 +1250,7 @@
       if (icepack_warnings_aborted()) call abort_ice(error_message=subname, &
          file=__FILE__, line=__LINE__)
 
+      !$omp simd private(i, j, uold, vold, vrel, tauy, ccc, Cb, cca, ccb, cc2)
       do ij =1, icell
          i = indxi(ij)
          j = indxj(ij)
@@ -2080,6 +2083,8 @@
 !
 ! 2019: subroutine created by Philippe Blain, ECCC
 
+      ! inline into the vectorised loop in stress (ice_dyn_evp); needs IPO/LTO across modules
+      !DIR$ ATTRIBUTES FORCEINLINE :: strain_rates
       subroutine strain_rates (nx_block,   ny_block,   &
                                i,          j,          &
                                uvel,       vvel,       &
@@ -2382,6 +2387,7 @@
       shearU  (:,:) = c0
       deltaU  (:,:) = c0
 
+      !$omp simd private(i, j, uNip1j, uNij, vEijp1, vEij, uEijp1, uEij, vNip1j, vNij)
       do ij = 1, icellU
          i = indxUi(ij)
          j = indxUj(ij)
