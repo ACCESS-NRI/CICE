@@ -425,6 +425,10 @@
       integer (kind=int_kind), dimension(nx_block,ny_block,max_blocks) :: &
          halomask           ! temporary mask for fast halo updates
 
+      real (kind=dbl_kind) ::     &
+         outfrac        , & ! area leaving a cell through all its faces / cell area
+         outfrac_stop       ! outfrac in the cell where the model aborts
+
       logical (kind=log_kind) ::     &
          l_stop             ! if true, abort the model
 
@@ -448,7 +452,8 @@
       !-------------------------------------------------------------------
 
       !$OMP PARALLEL DO PRIVATE(iblk,ilo,ihi,jlo,jhi,this_block,n,   &
-      !$OMP          indxinc,indxjnc,mmask,tmask,istop,jstop,l_stop) &
+      !$OMP          indxinc,indxjnc,mmask,tmask,istop,jstop,l_stop, &
+      !$OMP          outfrac,outfrac_stop) &
       !$OMP SCHEDULE(runtime)
       do iblk = 1, nblocks
 
@@ -531,6 +536,49 @@
 
          if (l_stop) then
             call diagnostic_abort(istop,jstop,iblk,'bad departure points')
+         endif
+
+         !-------------------------------------------------------------------
+         ! On C/CD grids with edge flux adjustment, the area crossing each
+         ! face is set from the face velocity, not the corner velocities
+         ! checked above. Corner velocities are zero where a corner touches
+         ! land (e.g. one-cell-wide channels), and outflow through several
+         ! faces can add up to more than the cell. Check the total area
+         ! leaving each cell does not exceed the cell area.
+         !-------------------------------------------------------------------
+
+         if (l_edge_flux_adj .and. (grid_ice == 'CD' .or. grid_ice == 'C')) then
+            if (.not.present(uvelE) .or. .not.present(vvelN)) then
+               call abort_ice (subname//'ERROR: uvelE,vvelN required with C|CD and l_edge_flux_adj')
+            endif
+
+            do j = jlo, jhi
+            do i = ilo, ihi
+               outfrac = dt * tarear(i,j,iblk)                                   &
+                       * ( max(uvelE(i  ,j  ,iblk), c0) * HTE(i  ,j  ,iblk)   &
+                         - min(uvelE(i-1,j  ,iblk), c0) * HTE(i-1,j  ,iblk)   &
+                         + max(vvelN(i  ,j  ,iblk), c0) * HTN(i  ,j  ,iblk)   &
+                         - min(vvelN(i  ,j-1,iblk), c0) * HTN(i  ,j-1,iblk) )
+               if (outfrac > c1) then
+                  l_stop = .true.
+                  istop = i
+                  jstop = j
+                  outfrac_stop = outfrac
+               endif
+            enddo
+            enddo
+
+            if (l_stop) then
+               i = istop
+               j = jstop
+               write (nu_diag,*) ' '
+               write (nu_diag,*) 'Warning: face outflow exceeds cell area in remap'
+               write (nu_diag,*) 'my_task, i, j =', my_task, i, j
+               write (nu_diag,*) 'outflow area / cell area =', outfrac_stop
+               write (nu_diag,*) 'uvelE(i-1,j), uvelE(i,j) =', uvelE(i-1,j,iblk), uvelE(i,j,iblk)
+               write (nu_diag,*) 'vvelN(i,j-1), vvelN(i,j) =', vvelN(i,j-1,iblk), vvelN(i,j,iblk)
+               call diagnostic_abort(istop,jstop,iblk,'bad departure points: face outflow exceeds cell area')
+            endif
          endif
 
       enddo                     ! iblk
