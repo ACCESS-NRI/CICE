@@ -2012,6 +2012,14 @@
 
       str(:,:,:) = c0
 
+      !$omp simd private(i, j, divune, divunw, divuse, divusw, tensionne, tensionnw, tensionse, &
+      !$omp& tensionsw, shearne, shearnw, shearse, shearsw, Deltane, Deltanw, Deltase, Deltasw, &
+      !$omp& zetax2ne, zetax2nw, zetax2se, zetax2sw, etax2ne, etax2nw, etax2se, etax2sw, rep_prsne, &
+      !$omp& rep_prsnw, rep_prsse, rep_prssw, ssigpn, ssigps, ssigpe, ssigpw, ssigmn, ssigms, &
+      !$omp& ssigme, ssigmw, ssig12n, ssig12s, ssig12e, ssig12w, ssigp1, ssigp2, ssigm1, ssigm2, &
+      !$omp& ssig121, ssig122, csigpne, csigpnw, csigpse, csigpsw, csigmne, csigmnw, csigmse, &
+      !$omp& csigmsw, csig12ne, csig12nw, csig12se, csig12sw, str12ew, str12we, str12ns, str12sn, &
+      !$omp& strp_tmp, strm_tmp)
       do ij = 1, icellT
          i = indxTi(ij)
          j = indxTj(ij)
@@ -2307,6 +2315,7 @@
                            dxT   (:,:), dyT     (:,:), &
                            divT  (:,:), tensionT(:,:))
 
+      !$omp simd private(i, j, uareaavgr, shearTsqr, shearT, DeltaT, rep_prsT)
       do ij = 1, icellT
          i = indxTi(ij)
          j = indxTj(ij)
@@ -2421,6 +2430,7 @@
       !-----------------------------------------------------------------
 
       if (visc_method == 'avg_zeta') then
+         !$omp simd private(i, j)
          do ij = 1, icellU
             i = indxUi(ij)
             j = indxUj(ij)
@@ -2429,6 +2439,7 @@
          enddo
 
       elseif (visc_method == 'avg_strength') then
+         !$omp simd private(i, j, DminUarea, lzetax2U, letax2U, lrep_prsU)
          do ij = 1, icellU
             i = indxUi(ij)
             j = indxUj(ij)
