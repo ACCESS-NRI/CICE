@@ -523,6 +523,8 @@ dynamics_nml
    "``brlx``", "real", "revised_evp value", "300.0"
    "``capping_method``", "``max``", "max capping in :cite:`Hibler79`", "max"
    "", "``sum``", "sum capping in :cite:`Kreyscher00`", ""
+   "``cgrid_evp_halo``", "``recompute``", "C grid EVP: compute shearU and stress12U in ghost cells instead of exchanging them, 3 halo updates per subcycle instead of 5, bit for bit with standard", "``standard``"
+   "", "``standard``", "C grid EVP: 5 halo updates per subcycle", ""
    "``Cf``", "real", "ratio of ridging work to PE change in ridging", "17.0"
    "``coriolis``", "``constant``", "constant coriolis value = 1.46e-4 s\ :math:`^{-1}`", "``latitude``"
    "", "``latitude``", "coriolis variable by latitude", ""

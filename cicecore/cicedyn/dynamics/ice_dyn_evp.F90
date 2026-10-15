@@ -120,6 +120,21 @@
          umassdti (:,:,:) , & ! mass of U-cell/dte (kg/m^2 s)
          rheofactU(:,:,:)     ! 1, except 0 where aiU <= rheo_area_min
 
+      ! C grid EVP subcycle with recomputed ghost cells (cgrid_evp_halo = 'recompute')
+
+      logical (kind=log_kind) :: &
+         evp_recompute = .false.  ! use the C grid EVP subcycle with recomputed ghost cells
+
+      logical (kind=log_kind), dimension (:,:,:), allocatable :: &
+         validU   , & ! physical U cells and U ghost cells set by halo updates
+         iceUmaskh    ! iceUmask including the halo
+
+      integer (kind=int_kind), dimension (:), allocatable :: &
+         icellUr      ! no. of U cells in list including west and south ghost cells
+
+      integer (kind=int_kind), dimension (:,:), allocatable :: &
+         indxUri, indxUrj ! compressed indices of that list
+
       public :: evp, init_evp
 
 !=======================================================================
@@ -135,7 +150,7 @@
       use ice_domain, only: nblocks, blocks_ice
       use ice_grid, only: grid_ice, dxN, dyE
       use ice_calendar, only: dt_dyn
-      use ice_dyn_shared, only: init_dyn_shared, evp_algorithm
+      use ice_dyn_shared, only: init_dyn_shared, evp_algorithm, cgrid_evp_halo
       use ice_dyn_evp1d, only: dyn_evp1d_init
 
 !allocate c and cd grid var. Follow structucre of eap
@@ -232,6 +247,11 @@
                    stat=ierr)
          if (ierr/=0) call abort_ice(subname//' ERROR: Out of memory ratio')
 
+         ratiodxN (:,:,:) = c0
+         ratiodyE (:,:,:) = c0
+         ratiodxNr(:,:,:) = c0
+         ratiodyEr(:,:,:) = c0
+
          !$OMP PARALLEL DO PRIVATE(iblk,i,j,ilo,ihi,jlo,jhi,this_block)
          do iblk = 1, nblocks
             this_block = get_block(blocks_ice(iblk),iblk)
@@ -250,6 +270,10 @@
             enddo
          enddo                     ! iblk
          !$OMP END PARALLEL DO
+
+         if (grid_ice == 'C' .and. cgrid_evp_halo == 'recompute') then
+            call init_evp_recompute
+         endif
 
       endif
 
@@ -945,6 +969,14 @@
 
       elseif (grid_ice == "C") then
 
+         if (evp_recompute) then
+
+            call evp_subcycle_C_recompute (icellT, indxTi, indxTj, &
+                                           icellE, indxEi, indxEj, &
+                                           icellN, indxNi, indxNj)
+
+         else
+
          do ksub = 1,ndte        ! subcycling
 
             !$OMP PARALLEL DO PRIVATE(iblk)
@@ -1105,6 +1137,8 @@
             call ice_restoring_halo(setfld='velocity')
 
          enddo                     ! subcycling
+
+         endif ! evp_recompute
 
          !-----------------------------------------------------------------
          ! save quantities for mechanical redistribution
@@ -1452,6 +1486,446 @@
       call ice_timer_stop(timer_dynamics)    ! dynamics
 
       end subroutine evp
+
+!=======================================================================
+! Set up the C grid EVP subcycle with recomputed ghost cells
+! (cgrid_evp_halo = 'recompute').
+!
+! The standard C grid subcycle has 5 rounds of halo updates.  The
+! recompute subcycle computes shearU and stress12U in the west and south
+! ghost cells instead of exchanging them, so 3 rounds are left:
+! uvelE and vvelN; uvelN, vvelE, uvel and vvel; and the T stresses.  The
+! ghost cells across the tripole seam cannot be computed locally; the
+! tripole fold of shearU and stress12U is done with tripoleOnly halo
+! updates, which send no messages on tasks away from the seam.  Ghost
+! cells are computed with the same routines as the physical cells, and
+! only where a halo update would set them, so results are bit for bit
+! identical to the standard subcycle.  The unmasked halo is used.
+
+      subroutine init_evp_recompute
+
+      use ice_blocks, only: block, get_block, nx_block, ny_block
+      use ice_boundary, only: ice_HaloUpdate
+      use ice_domain, only: nblocks, blocks_ice, halo_info
+      use ice_domain_size, only: max_blocks
+
+      ! local variables
+
+      integer (kind=int_kind) :: &
+         iblk, ierr        , & ! block index, error flag
+         ilo,ihi,jlo,jhi       ! beginning and end of physical domain
+
+      real (kind=dbl_kind), dimension(:,:,:), allocatable :: &
+         markU        ! 1 in physical cells, -1 in ghost cells, then halo updated
+
+      type (block) :: &
+         this_block   ! block information for current block
+
+      character(len=*), parameter :: subname = '(init_evp_recompute)'
+
+      evp_recompute = .true.
+
+      allocate(validU   (nx_block,ny_block,max_blocks), &
+               iceUmaskh(nx_block,ny_block,max_blocks), &
+               icellUr  (max_blocks), &
+               indxUri  (nx_block*ny_block,max_blocks), &
+               indxUrj  (nx_block*ny_block,max_blocks), &
+               markU    (nx_block,ny_block,max_blocks), &
+               stat=ierr)
+      if (ierr/=0) call abort_ice(subname//' ERROR: Out of memory recompute evp')
+
+      !-----------------------------------------------------------------
+      ! U cells that are physical, or ghost cells set by a halo update
+      ! (not ghost cells at closed boundaries or next to land blocks)
+      !-----------------------------------------------------------------
+
+      markU(:,:,:) = -c1
+      do iblk = 1, nblocks
+         this_block = get_block(blocks_ice(iblk),iblk)
+         ilo = this_block%ilo
+         ihi = this_block%ihi
+         jlo = this_block%jlo
+         jhi = this_block%jhi
+         markU(ilo:ihi,jlo:jhi,iblk) = c1
+      enddo
+      call ice_HaloUpdate (markU,              halo_info, &
+                           field_loc_NEcorner, field_type_scalar)
+      validU(:,:,:) = (markU(:,:,:) > p5)
+      deallocate(markU)
+
+      !-----------------------------------------------------------------
+      ! ratios for the boundary conditions in strain_rates_U in the halo
+      !-----------------------------------------------------------------
+
+      call evp_halo_ghosts ( &
+           (/ field_loc_Nface, field_loc_Nface, field_loc_Eface, field_loc_Eface /), &
+           (/ field_type_scalar, field_type_scalar, field_type_scalar, field_type_scalar /), &
+           ratiodxN, ratiodxNr, ratiodyE, ratiodyEr)
+
+      end subroutine init_evp_recompute
+
+!=======================================================================
+! C grid EVP subcycling with recomputed ghost cells, see
+! init_evp_recompute.  Replaces the standard C grid subcycling loop in evp.
+
+      subroutine evp_subcycle_C_recompute (icellT, indxTi, indxTj, &
+                                           icellE, indxEi, indxEj, &
+                                           icellN, indxNi, indxNj)
+
+      use ice_blocks, only: block, get_block, nx_block, ny_block
+      use ice_boundary, only: ice_HaloUpdate, ice_HaloUpdate_multi
+      use ice_domain, only: nblocks, blocks_ice, halo_info
+      use ice_domain_size, only: max_blocks
+      use ice_flux, only: strintxE, strintyN, taubxE, taubyN, fmE, fmN, TbE, TbN, &
+          stresspT, stressmT, stress12T, stress12U
+      use ice_grid, only: dxE, dxN, dxT, dxU, dyE, dyN, dyT, dyU, &
+          uarea, earear, narear, uvm, epm, npm, &
+          grid_average_X2Y, grid_average_X2Y_ext
+      use ice_restoring, only: ice_restoring_halo
+      use ice_state, only: uvel, vvel, uvelN, vvelN, uvelE, vvelE, strength
+      use ice_timers, only: ice_timer_start, ice_timer_stop, timer_bound
+      use ice_dyn_shared, only: DminTarea, visc_method, strain_rates_U, &
+          iceUmask
+
+      integer (kind=int_kind), dimension(max_blocks), intent(in) :: &
+         icellT   , & ! no. of cells where iceTmask = .true.
+         icellE   , & ! no. of cells where iceEmask = .true.
+         icellN       ! no. of cells where iceNmask = .true.
+
+      integer (kind=int_kind), dimension (nx_block*ny_block, max_blocks), intent(in) :: &
+         indxTi   , & ! compressed index in i-direction
+         indxTj   , & ! compressed index in j-direction
+         indxEi   , & ! compressed index in i-direction
+         indxEj   , & ! compressed index in j-direction
+         indxNi   , & ! compressed index in i-direction
+         indxNj       ! compressed index in j-direction
+
+      ! local variables
+
+      integer (kind=int_kind) :: &
+         ksub           , & ! subcycle step
+         iblk           , & ! block index
+         i, j           , & ! local indices
+         ilo,ihi,jlo,jhi    ! beginning and end of physical domain
+
+      logical (kind=log_kind) :: &
+         lmask              ! cell is in the U list
+
+      integer (kind=int_kind), dimension(4), parameter :: &
+         extWS = (/ 1, 0, 1, 0 /) ! west and south ghost cells (west, east, south, north)
+
+      type (block) :: &
+         this_block   ! block information for current block
+
+      character(len=*), parameter :: subname = '(evp_subcycle_C_recompute)'
+
+      !-----------------------------------------------------------------
+      ! ice extent at U points in the halo, and the list of U cells
+      ! including the west and south ghost cells
+      !-----------------------------------------------------------------
+
+      call ice_timer_start(timer_bound)
+      iceUmaskh(:,:,:) = iceUmask(:,:,:)
+      call ice_HaloUpdate (iceUmaskh,          halo_info, &
+                           field_loc_NEcorner, field_type_scalar)
+      call ice_timer_stop(timer_bound)
+
+      !$OMP PARALLEL DO PRIVATE(iblk,i,j,ilo,ihi,jlo,jhi,this_block,lmask) SCHEDULE(runtime)
+      do iblk = 1, nblocks
+         this_block = get_block(blocks_ice(iblk),iblk)
+         ilo = this_block%ilo
+         ihi = this_block%ihi
+         jlo = this_block%jlo
+         jhi = this_block%jhi
+
+         icellUr(iblk) = 0
+         do j = jlo-1, jhi
+         do i = ilo-1, ihi
+            if (i >= ilo .and. j >= jlo) then
+               lmask = iceUmask(i,j,iblk)
+            else
+               lmask = validU(i,j,iblk) .and. iceUmaskh(i,j,iblk)
+            endif
+            if (lmask) then
+               icellUr(iblk) = icellUr(iblk) + 1
+               indxUri(icellUr(iblk),iblk) = i
+               indxUrj(icellUr(iblk),iblk) = j
+            endif
+         enddo
+         enddo
+      enddo
+      !$OMP END PARALLEL DO
+
+      ! the old stress12U is needed in the west and south ghost cells
+      call evp_halo_ghosts ((/ field_loc_NEcorner /), (/ field_type_scalar /), &
+                            stress12U)
+
+      do ksub = 1,ndte        ! subcycling
+
+         !$OMP PARALLEL DO PRIVATE(iblk)
+         do iblk = 1, nblocks
+            call strain_rates_U (nx_block          , ny_block           , &
+                                 icellUr     (iblk),                      &
+                                 indxUri   (:,iblk), indxUrj    (:,iblk), &
+                                 uvelE   (:,:,iblk), vvelE    (:,:,iblk), &
+                                 uvelN   (:,:,iblk), vvelN    (:,:,iblk), &
+                                 uvel    (:,:,iblk), vvel     (:,:,iblk), &
+                                 dxE     (:,:,iblk), dyN      (:,:,iblk), &
+                                 dxU     (:,:,iblk), dyU      (:,:,iblk), &
+                                 ratiodxN(:,:,iblk), ratiodxNr(:,:,iblk), &
+                                 ratiodyE(:,:,iblk), ratiodyEr(:,:,iblk), &
+                                 epm     (:,:,iblk), npm      (:,:,iblk), &
+                                 divergU (:,:,iblk), tensionU (:,:,iblk), &
+                                 shearU  (:,:,iblk), deltaU   (:,:,iblk)  )
+         enddo
+         !$OMP END PARALLEL DO
+
+         ! tripole fold only
+         call ice_timer_start(timer_bound)
+         call ice_HaloUpdate (shearU,             halo_info,         &
+                              field_loc_NEcorner, field_type_scalar, &
+                              tripoleOnly=.true.)
+         call ice_timer_stop(timer_bound)
+
+         !$OMP PARALLEL DO PRIVATE(iblk)
+         do iblk = 1, nblocks
+            call stressC_T (nx_block           , ny_block            , &
+                                                 icellT        (iblk), &
+                            indxTi      (:,iblk), indxTj      (:,iblk), &
+                            uvelE     (:,:,iblk), vvelE     (:,:,iblk), &
+                            uvelN     (:,:,iblk), vvelN     (:,:,iblk), &
+                            dxN       (:,:,iblk), dyE       (:,:,iblk), &
+                            dxT       (:,:,iblk), dyT       (:,:,iblk), &
+                            uarea     (:,:,iblk), DminTarea (:,:,iblk), &
+                            strength  (:,:,iblk), shearU    (:,:,iblk), &
+                            zetax2T   (:,:,iblk), etax2T    (:,:,iblk), &
+                            stresspT  (:,:,iblk), stressmT  (:,:,iblk), &
+                            stress12T (:,:,iblk))
+         enddo
+         !$OMP END PARALLEL DO
+
+         call ice_timer_start(timer_bound)
+         call ice_HaloUpdate_multi (halo_info, &
+              (/ field_loc_center, field_loc_center, field_loc_center, field_loc_center /), &
+              (/ field_type_scalar, field_type_scalar, field_type_scalar, field_type_scalar /), &
+              zetax2T, etax2T, stresspT, stressmT)
+         call ice_timer_stop(timer_bound)
+
+         if (visc_method == 'avg_strength') then
+            call grid_average_X2Y_ext('S', strength, 'T', strengthU, 'U', extWS)
+            where (.not. validU) strengthU = c0
+         elseif (visc_method == 'avg_zeta') then
+            call grid_average_X2Y_ext('S', etax2T  , 'T', etax2U   , 'U', extWS)
+            where (.not. validU) etax2U = c0
+         endif
+
+         !$OMP PARALLEL DO PRIVATE(iblk)
+         do iblk = 1, nblocks
+            call stressC_U (nx_block           , ny_block            , &
+                                                 icellUr       (iblk), &
+                            indxUri     (:,iblk), indxUrj     (:,iblk), &
+                            uarea     (:,:,iblk),                       &
+                            etax2U    (:,:,iblk), deltaU    (:,:,iblk), &
+                            strengthU (:,:,iblk), shearU    (:,:,iblk), &
+                            stress12U (:,:,iblk))
+         enddo
+         !$OMP END PARALLEL DO
+
+         ! tripole fold only
+         call ice_timer_start(timer_bound)
+         call ice_HaloUpdate (stress12U,          halo_info,         &
+                              field_loc_NEcorner, field_type_scalar, &
+                              tripoleOnly=.true.)
+         call ice_timer_stop(timer_bound)
+
+         !$OMP PARALLEL DO PRIVATE(iblk)
+         do iblk = 1, nblocks
+
+            call div_stress_Ex (nx_block            , ny_block            , &
+                                                      icellE        (iblk), &
+                                indxEi      (:,iblk), indxEj      (:,iblk), &
+                                dxE       (:,:,iblk), dyE       (:,:,iblk), &
+                                dxU       (:,:,iblk), dyT       (:,:,iblk), &
+                                earear    (:,:,iblk), rheofactE (:,:,iblk), &
+                                stresspT  (:,:,iblk), stressmT  (:,:,iblk), &
+                                stress12U (:,:,iblk), strintxE  (:,:,iblk)  )
+
+            call div_stress_Ny (nx_block            , ny_block            , &
+                                                      icellN        (iblk), &
+                                indxNi      (:,iblk), indxNj      (:,iblk), &
+                                dxN       (:,:,iblk), dyN       (:,:,iblk), &
+                                dxT       (:,:,iblk), dyU       (:,:,iblk), &
+                                narear    (:,:,iblk), rheofactN (:,:,iblk), &
+                                stresspT  (:,:,iblk), stressmT  (:,:,iblk), &
+                                stress12U (:,:,iblk), strintyN  (:,:,iblk)  )
+
+         enddo
+         !$OMP END PARALLEL DO
+
+         !$OMP PARALLEL DO PRIVATE(iblk)
+         do iblk = 1, nblocks
+
+             call stepu_C (nx_block            , ny_block            , & ! u, E point
+                           icellE        (iblk), Cdn_ocnE  (:,:,iblk), &
+                           indxEi      (:,iblk), indxEj      (:,iblk), &
+                                                 aiE       (:,:,iblk), &
+                           uocnE     (:,:,iblk), vocnE     (:,:,iblk), &
+                           waterxE   (:,:,iblk), forcexE   (:,:,iblk), &
+                           emassdti  (:,:,iblk), fmE       (:,:,iblk), &
+                           strintxE  (:,:,iblk), taubxE    (:,:,iblk), &
+                           uvelE_init(:,:,iblk),                       &
+                           uvelE     (:,:,iblk), vvelE     (:,:,iblk), &
+                           TbE       (:,:,iblk))
+
+             call stepv_C (nx_block,             ny_block,             & ! v, N point
+                           icellN        (iblk), Cdn_ocnN  (:,:,iblk), &
+                           indxNi      (:,iblk), indxNj      (:,iblk), &
+                                                 aiN       (:,:,iblk), &
+                           uocnN     (:,:,iblk), vocnN     (:,:,iblk), &
+                           wateryN   (:,:,iblk), forceyN   (:,:,iblk), &
+                           nmassdti  (:,:,iblk), fmN       (:,:,iblk), &
+                           strintyN  (:,:,iblk), taubyN    (:,:,iblk), &
+                           vvelN_init(:,:,iblk),                       &
+                           uvelN     (:,:,iblk), vvelN     (:,:,iblk), &
+                           TbN       (:,:,iblk))
+         enddo
+         !$OMP END PARALLEL DO
+
+         call ice_timer_start(timer_bound)
+         call ice_HaloUpdate_multi (halo_info, &
+              (/ field_loc_Eface, field_loc_Nface /), &
+              (/ field_type_vector, field_type_vector /), &
+              uvelE, vvelN)
+         call ice_timer_stop(timer_bound)
+
+         call grid_average_X2Y('A', uvelE, 'E', uvelN, 'N')
+         call grid_average_X2Y('A', vvelN, 'N', vvelE, 'E')
+         uvelN(:,:,:) = uvelN(:,:,:)*npm(:,:,:)
+         vvelE(:,:,:) = vvelE(:,:,:)*epm(:,:,:)
+
+         call grid_average_X2Y('A', uvelE, 'E', uvel, 'U')
+         call grid_average_X2Y('A', vvelN, 'N', vvel, 'U')
+         uvel(:,:,:) = uvel(:,:,:)*uvm(:,:,:)
+         vvel(:,:,:) = vvel(:,:,:)*uvm(:,:,:)
+
+         call ice_timer_start(timer_bound)
+         call ice_HaloUpdate_multi (halo_info, &
+              (/ field_loc_Nface, field_loc_Eface, field_loc_NEcorner, field_loc_NEcorner /), &
+              (/ field_type_vector, field_type_vector, field_type_vector, field_type_vector /), &
+              uvelN, vvelE, uvel, vvel)
+         call ice_timer_stop(timer_bound)
+
+         call ice_restoring_halo(setfld='velocity')
+
+      enddo                     ! subcycling
+
+      ! fill the rest of the halo of shearU and stress12U, as the standard
+      ! subcycle leaves it
+      call evp_halo_ghosts ((/ field_loc_NEcorner, field_loc_NEcorner /), &
+                            (/ field_type_scalar , field_type_scalar  /), &
+                            shearU, stress12U)
+
+      end subroutine evp_subcycle_C_recompute
+
+!=======================================================================
+! Halo update of the ghost cells only: physical cells are left as they
+! are (a halo update also averages the physical cells on the tripole
+! fold, which must not be repeated).
+
+      subroutine evp_halo_ghosts (field_loc, field_type, &
+                                  fld1, fld2, fld3, fld4, fld5, fld6)
+
+      use ice_blocks, only: block, get_block, nx_block, ny_block
+      use ice_boundary, only: ice_HaloUpdate_multi
+      use ice_domain, only: nblocks, blocks_ice, halo_info
+      use ice_domain_size, only: max_blocks
+      use ice_timers, only: ice_timer_start, ice_timer_stop, timer_bound
+
+      integer (kind=int_kind), dimension(:), intent(in) :: &
+         field_loc  ,  & ! field loc, per field
+         field_type      ! field_type, per field
+
+      real (kind=dbl_kind), dimension (nx_block,ny_block,max_blocks), intent(inout) :: &
+         fld1            ! fields to update
+
+      real (kind=dbl_kind), dimension (nx_block,ny_block,max_blocks), intent(inout), optional :: &
+         fld2, fld3, fld4, fld5, fld6
+
+      ! local variables
+
+      integer (kind=int_kind) :: &
+         nfld, i, j, iblk, &
+         ilo,ihi,jlo,jhi      ! beginning and end of physical domain
+
+      real (kind=dbl_kind), dimension (:,:,:,:), allocatable, target :: &
+         work
+
+      type (block) :: &
+         this_block           ! block information for current block
+
+      character(len=*), parameter :: subname = '(evp_halo_ghosts)'
+
+      nfld = size(field_loc)
+      allocate(work(nx_block,ny_block,max_blocks,nfld))
+
+                       work(:,:,:,1) = fld1(:,:,:)
+      if (nfld >= 2)   work(:,:,:,2) = fld2(:,:,:)
+      if (nfld >= 3)   work(:,:,:,3) = fld3(:,:,:)
+      if (nfld >= 4)   work(:,:,:,4) = fld4(:,:,:)
+      if (nfld >= 5)   work(:,:,:,5) = fld5(:,:,:)
+      if (nfld >= 6)   work(:,:,:,6) = fld6(:,:,:)
+
+      call ice_timer_start(timer_bound)
+      select case (nfld)
+      case (1)
+         call ice_HaloUpdate_multi (halo_info, field_loc, field_type, work(:,:,:,1))
+      case (2)
+         call ice_HaloUpdate_multi (halo_info, field_loc, field_type, work(:,:,:,1), &
+                                    work(:,:,:,2))
+      case (3)
+         call ice_HaloUpdate_multi (halo_info, field_loc, field_type, work(:,:,:,1), &
+                                    work(:,:,:,2), work(:,:,:,3))
+      case (4)
+         call ice_HaloUpdate_multi (halo_info, field_loc, field_type, work(:,:,:,1), &
+                                    work(:,:,:,2), work(:,:,:,3), work(:,:,:,4))
+      case (5)
+         call ice_HaloUpdate_multi (halo_info, field_loc, field_type, work(:,:,:,1), &
+                                    work(:,:,:,2), work(:,:,:,3), work(:,:,:,4), &
+                                    work(:,:,:,5))
+      case (6)
+         call ice_HaloUpdate_multi (halo_info, field_loc, field_type, work(:,:,:,1), &
+                                    work(:,:,:,2), work(:,:,:,3), work(:,:,:,4), &
+                                    work(:,:,:,5), work(:,:,:,6))
+      case default
+         call abort_ice(subname//' ERROR: 1 to 6 fields', file=__FILE__, line=__LINE__)
+      end select
+      call ice_timer_stop(timer_bound)
+
+      !$OMP PARALLEL DO PRIVATE(iblk,i,j,ilo,ihi,jlo,jhi,this_block)
+      do iblk = 1, nblocks
+         this_block = get_block(blocks_ice(iblk),iblk)
+         ilo = this_block%ilo
+         ihi = this_block%ihi
+         jlo = this_block%jlo
+         jhi = this_block%jhi
+         do j = 1, ny_block
+         do i = 1, nx_block
+            if (i < ilo .or. i > ihi .or. j < jlo .or. j > jhi) then
+                              fld1(i,j,iblk) = work(i,j,iblk,1)
+               if (nfld >= 2) fld2(i,j,iblk) = work(i,j,iblk,2)
+               if (nfld >= 3) fld3(i,j,iblk) = work(i,j,iblk,3)
+               if (nfld >= 4) fld4(i,j,iblk) = work(i,j,iblk,4)
+               if (nfld >= 5) fld5(i,j,iblk) = work(i,j,iblk,5)
+               if (nfld >= 6) fld6(i,j,iblk) = work(i,j,iblk,6)
+            endif
+         enddo
+         enddo
+      enddo
+      !$OMP END PARALLEL DO
+
+      deallocate(work)
+
+      end subroutine evp_halo_ghosts
 
 !=======================================================================
 ! Computes the rates of strain and internal stress components for

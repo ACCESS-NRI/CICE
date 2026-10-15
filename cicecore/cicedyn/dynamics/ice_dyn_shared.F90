@@ -61,6 +61,8 @@
       character (len=char_len), public :: &
          yield_curve      , & ! 'ellipse' ('teardrop' needs further testing)
          visc_method      , & ! method for viscosity calc at U points (C, CD grids)
+         cgrid_evp_halo   , & ! C grid EVP subcycle halo updates: 'standard' or 'recompute'
+                              ! (recompute computes ghost cells locally instead of exchanging them)
          seabed_stress_method ! method for seabed stress calculation
                               ! LKD: Lemieux et al. 2015, probabilistic: Dupont et al. 2022
 

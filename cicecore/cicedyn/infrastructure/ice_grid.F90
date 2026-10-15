@@ -48,7 +48,7 @@
 
       implicit none
       private
-      public :: init_grid1, init_grid2, grid_average_X2Y, makemask, &
+      public :: init_grid1, init_grid2, grid_average_X2Y, grid_average_X2Y_ext, makemask, &
                 alloc_grid, dealloc_grid, &
                 grid_neighbor_min, grid_neighbor_max
 
@@ -3857,6 +3857,45 @@
       end subroutine grid_average_X2Y_base
 
 !=======================================================================
+! Shifts quantities from one grid to another, also in part of the halo
+
+      subroutine grid_average_X2Y_ext(type,work1,grid1,work2,grid2,ext)
+
+      ! As grid_average_X2Y, but also computed in the part of the halo
+      ! given by ext (west, east, south, north).  The halo cells need
+      ! valid inputs one cell further out.  Only the masked T to U
+      ! average used by the C grid EVP is supported.
+
+      character(len=*) , intent(in) :: &
+         type, grid1, grid2
+
+      real (kind=dbl_kind), intent(in) :: &
+         work1(:,:,:)
+
+      real (kind=dbl_kind), intent(out)   :: &
+         work2(:,:,:)
+
+      integer (kind=int_kind), dimension(4), intent(in) :: &
+         ext
+
+      ! local variables
+
+      character(len=16) :: X2Y
+
+      character(len=*), parameter :: subname = '(grid_average_X2Y_ext)'
+
+      X2Y = trim(grid1)//'2'//trim(grid2)//trim(type)
+
+      select case (trim(X2Y))
+         case('T2US')
+            call grid_average_X2YS('NE',work1,tarea,hm ,work2,ext)
+         case default
+            call abort_ice(subname//' ERROR: unknown X2Y '//trim(X2Y), file=__FILE__, line=__LINE__)
+      end select
+
+      end subroutine grid_average_X2Y_ext
+
+!=======================================================================
 ! Shifts quantities from one grid to another
 ! NOTE: Input array includes ghost cells that must be updated before
 !       calling this routine.
@@ -4172,7 +4211,7 @@
 !
 ! author: T. Craig
 
-      subroutine grid_average_X2YS(dir,work1,wght1,mask1,work2)
+      subroutine grid_average_X2YS(dir,work1,wght1,mask1,work2,ext)
 
       character(len=*) , intent(in) :: &
          dir
@@ -4184,6 +4223,10 @@
 
       real (kind=dbl_kind), intent(out) :: &
          work2(:,:,:)
+
+      integer (kind=int_kind), dimension(4), intent(in), optional :: &
+         ext                  ! extend the computed region into the halo
+                              ! (west, east, south, north), default none
 
       ! local variables
 
@@ -4197,7 +4240,13 @@
       type (block) :: &
          this_block           ! block information for current block
 
+      integer (kind=int_kind), dimension(4) :: &
+         lext                 ! local ext
+
       character(len=*), parameter :: subname = '(grid_average_X2YS)'
+
+      lext(:) = 0
+      if (present(ext)) lext(:) = ext(:)
 
       work2(:,:,:) = c0
 
@@ -4207,10 +4256,10 @@
             !$OMP PARALLEL DO PRIVATE(iblk,i,j,ilo,ihi,jlo,jhi,this_block,wtmp)
             do iblk = 1, nblocks
                this_block = get_block(blocks_ice(iblk),iblk)
-               ilo = this_block%ilo
-               ihi = this_block%ihi
-               jlo = this_block%jlo
-               jhi = this_block%jhi
+               ilo = this_block%ilo - lext(1)
+               ihi = this_block%ihi + lext(2)
+               jlo = this_block%jlo - lext(3)
+               jhi = this_block%jhi + lext(4)
                do j = jlo, jhi
                do i = ilo, ihi
                   wtmp = (mask1(i  ,j  ,iblk)*wght1(i  ,j  ,iblk)  &
@@ -4232,10 +4281,10 @@
             !$OMP PARALLEL DO PRIVATE(iblk,i,j,ilo,ihi,jlo,jhi,this_block,wtmp)
             do iblk = 1, nblocks
                this_block = get_block(blocks_ice(iblk),iblk)
-               ilo = this_block%ilo
-               ihi = this_block%ihi
-               jlo = this_block%jlo
-               jhi = this_block%jhi
+               ilo = this_block%ilo - lext(1)
+               ihi = this_block%ihi + lext(2)
+               jlo = this_block%jlo - lext(3)
+               jhi = this_block%jhi + lext(4)
                do j = jlo, jhi
                do i = ilo, ihi
                   wtmp = (mask1(i  ,j  ,iblk)*wght1(i  ,j  ,iblk)  &
@@ -4257,10 +4306,10 @@
             !$OMP PARALLEL DO PRIVATE(iblk,i,j,ilo,ihi,jlo,jhi,this_block,wtmp)
             do iblk = 1, nblocks
                this_block = get_block(blocks_ice(iblk),iblk)
-               ilo = this_block%ilo
-               ihi = this_block%ihi
-               jlo = this_block%jlo
-               jhi = this_block%jhi
+               ilo = this_block%ilo - lext(1)
+               ihi = this_block%ihi + lext(2)
+               jlo = this_block%jlo - lext(3)
+               jhi = this_block%jhi + lext(4)
                do j = jlo, jhi
                do i = ilo, ihi
                   wtmp = (mask1(i-1,j  ,iblk)*wght1(i-1,j  ,iblk)  &
@@ -4282,10 +4331,10 @@
             !$OMP PARALLEL DO PRIVATE(iblk,i,j,ilo,ihi,jlo,jhi,this_block,wtmp)
             do iblk = 1, nblocks
                this_block = get_block(blocks_ice(iblk),iblk)
-               ilo = this_block%ilo
-               ihi = this_block%ihi
-               jlo = this_block%jlo
-               jhi = this_block%jhi
+               ilo = this_block%ilo - lext(1)
+               ihi = this_block%ihi + lext(2)
+               jlo = this_block%jlo - lext(3)
+               jhi = this_block%jhi + lext(4)
                do j = jlo, jhi
                do i = ilo, ihi
                   wtmp = (mask1(i  ,j-1,iblk)*wght1(i  ,j-1,iblk)  &
@@ -4307,10 +4356,10 @@
             !$OMP PARALLEL DO PRIVATE(iblk,i,j,ilo,ihi,jlo,jhi,this_block,wtmp)
             do iblk = 1, nblocks
                this_block = get_block(blocks_ice(iblk),iblk)
-               ilo = this_block%ilo
-               ihi = this_block%ihi
-               jlo = this_block%jlo
-               jhi = this_block%jhi
+               ilo = this_block%ilo - lext(1)
+               ihi = this_block%ihi + lext(2)
+               jlo = this_block%jlo - lext(3)
+               jhi = this_block%jhi + lext(4)
                do j = jlo, jhi
                do i = ilo, ihi
                   wtmp = (mask1(i  ,j,iblk)*wght1(i  ,j,iblk)  &
@@ -4328,10 +4377,10 @@
             !$OMP PARALLEL DO PRIVATE(iblk,i,j,ilo,ihi,jlo,jhi,this_block,wtmp)
             do iblk = 1, nblocks
                this_block = get_block(blocks_ice(iblk),iblk)
-               ilo = this_block%ilo
-               ihi = this_block%ihi
-               jlo = this_block%jlo
-               jhi = this_block%jhi
+               ilo = this_block%ilo - lext(1)
+               ihi = this_block%ihi + lext(2)
+               jlo = this_block%jlo - lext(3)
+               jhi = this_block%jhi + lext(4)
                do j = jlo, jhi
                do i = ilo, ihi
                   wtmp = (mask1(i-1,j,iblk)*wght1(i-1,j,iblk)  &
@@ -4349,10 +4398,10 @@
             !$OMP PARALLEL DO PRIVATE(iblk,i,j,ilo,ihi,jlo,jhi,this_block,wtmp)
             do iblk = 1, nblocks
                this_block = get_block(blocks_ice(iblk),iblk)
-               ilo = this_block%ilo
-               ihi = this_block%ihi
-               jlo = this_block%jlo
-               jhi = this_block%jhi
+               ilo = this_block%ilo - lext(1)
+               ihi = this_block%ihi + lext(2)
+               jlo = this_block%jlo - lext(3)
+               jhi = this_block%jhi + lext(4)
                do j = jlo, jhi
                do i = ilo, ihi
                   wtmp = (mask1(i,j  ,iblk)*wght1(i,j  ,iblk)  &
@@ -4370,10 +4419,10 @@
             !$OMP PARALLEL DO PRIVATE(iblk,i,j,ilo,ihi,jlo,jhi,this_block,wtmp)
             do iblk = 1, nblocks
                this_block = get_block(blocks_ice(iblk),iblk)
-               ilo = this_block%ilo
-               ihi = this_block%ihi
-               jlo = this_block%jlo
-               jhi = this_block%jhi
+               ilo = this_block%ilo - lext(1)
+               ihi = this_block%ihi + lext(2)
+               jlo = this_block%jlo - lext(3)
+               jhi = this_block%jhi + lext(4)
                do j = jlo, jhi
                do i = ilo, ihi
                   wtmp = (mask1(i,j-1,iblk)*wght1(i,j-1,iblk)  &

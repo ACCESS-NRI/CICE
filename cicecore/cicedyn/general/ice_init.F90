@@ -118,6 +118,7 @@
       use ice_dyn_shared, only: &
           ndte, kdyn, revised_evp, yield_curve, &
           evp_algorithm, visc_method,           &
+          cgrid_evp_halo,                       &
           free_drift_approx,                    &
           seabed_stress, seabed_stress_method,  &
           k1, k2, alphab, threshold_hw, Ktens,  &
@@ -253,7 +254,7 @@
         brlx,           arlx,           ssh_stress,                     &
         advection,      coriolis,       kridge,         ktransport,     &
         kstrength,      krdg_partic,    krdg_redist,    mu_rdg,         &
-        e_yieldcurve,   e_plasticpot,   visc_method,                    &
+        e_yieldcurve,   e_plasticpot,   visc_method,    cgrid_evp_halo, &
         maxits_nonlin,  precond,        dim_fgmres,                     &
         dim_pgmres,     maxits_fgmres,  maxits_pgmres,  monitor_nonlin, &
         monitor_fgmres, monitor_pgmres, reltol_nonlin,  reltol_fgmres,  &
@@ -453,6 +454,7 @@
       e_yieldcurve = 2.0_dbl_kind  ! VP aspect ratio of elliptical yield curve
       e_plasticpot = 2.0_dbl_kind  ! VP aspect ratio of elliptical plastic potential
       visc_method = 'avg_zeta' ! calc viscosities at U point: avg_strength, avg_zeta
+      cgrid_evp_halo = 'standard' ! C grid EVP subcycle halo updates: standard, recompute
       deltaminEVP = 1e-11_dbl_kind ! minimum delta for viscosities (EVP, Hunke 2001)
       deltaminVP  = 2e-9_dbl_kind  ! minimum delta for viscosities (VP, Hibler 1979)
       capping_method  = 'max'  ! method for capping of viscosities (max=Hibler 1979,sum=Kreyscher2000)
@@ -1086,6 +1088,7 @@
       call broadcast_scalar(e_yieldcurve,         master_task)
       call broadcast_scalar(e_plasticpot,         master_task)
       call broadcast_scalar(visc_method,          master_task)
+      call broadcast_scalar(cgrid_evp_halo,       master_task)
       call broadcast_scalar(deltaminEVP,          master_task)
       call broadcast_scalar(deltaminVP,           master_task)
       call broadcast_scalar(capping_method,       master_task)
@@ -1558,6 +1561,12 @@
                write(nu_diag,*) subname//' ERROR: visc_method should be avg_zeta or avg_strength'
             endif
             abort_list = trim(abort_list)//":44"
+         endif
+         if (cgrid_evp_halo /= 'standard' .and. cgrid_evp_halo /= 'recompute') then
+            if (my_task == master_task) then
+               write(nu_diag,*) subname//' ERROR: cgrid_evp_halo should be standard or recompute'
+            endif
+            abort_list = trim(abort_list)//":71"
          endif
          if (.not. free_drift_approx) then
             if (my_task == master_task) then
@@ -2278,6 +2287,9 @@
             endif
             if (grid_ice == 'C' .or. grid_ice == 'CD') then
                write(nu_diag,1030) ' visc_method= ', trim(visc_method),' : viscosities method (U point)'
+            endif
+            if (grid_ice == 'C' .and. kdyn == 1) then
+               write(nu_diag,1030) ' cgrid_evp_halo   = ', trim(cgrid_evp_halo),' : C grid EVP subcycle halo updates'
             endif
 
             write(nu_diag,1002) ' Ktens            = ', Ktens, ' : tensile strength factor'
