@@ -222,7 +222,7 @@ cat <<EOFF > $file
    nt = ${ntval}
 
    nxGlobal = 0
-   if (nxGlobal_size > 0) then
+   if (nxGlobal_size > 0 .and. halo%tripoleActive) then
       nxGlobal = nxGlobal_size
       allocate(bufTripole(nxGlobal,halo%tripoleRows,nz,nt),stat=istat)
       if (istat > 0) then
@@ -266,6 +266,11 @@ cat <<EOFF > $file
 !-----------------------------------------------------------------------
 
    do nmsg=1,halo%numMsgRecv
+      if (ltripoleOnly .and. halo%tripRecv(nmsg) == 0) then
+         ! tripoleOnly: no tripole data in this message, skip it
+         rcvRequest(nmsg) = MPI_REQUEST_NULL
+         cycle
+      endif
       len = halo%SizeRecv(nmsg)*nz*nt
       call MPI_IRECV(bufRecv(1,nmsg), len, ${mtype},  &
                      halo%recvTask(nmsg),              &
@@ -280,6 +285,11 @@ cat <<EOFF > $file
 !-----------------------------------------------------------------------
 
    do nmsg=1,halo%numMsgSend
+      if (ltripoleOnly .and. halo%tripSend(nmsg) == 0) then
+         ! tripoleOnly: no tripole data in this message, skip it
+         sndRequest(nmsg) = MPI_REQUEST_NULL
+         cycle
+      endif
       i=0
       do n=1,halo%sizeSend(nmsg)
          iSrc     = halo%sendAddr(1,n,nmsg)
@@ -441,6 +451,7 @@ cat <<EOFF > $file
    call MPI_WAITALL(halo%numMsgRecv, rcvRequest, rcvStatus, ierr)
 
    do nmsg=1,halo%numMsgRecv
+      if (ltripoleOnly .and. halo%tripRecv(nmsg) == 0) cycle  ! not received
       i = 0
       do n=1,halo%sizeRecv(nmsg)
          iDst     = halo%recvAddr(1,n,nmsg)
