@@ -5,7 +5,7 @@
       use ice_kinds_mod, only: int_kind, dbl_kind, real_kind, log_kind
       use ice_blocks, only: block, get_block, nx_block, ny_block, nblocks_tot, nghost, &
           nblocks_y, ew_boundary_type, ns_boundary_type
-      use ice_boundary, only: ice_HaloUpdate, ice_HaloUpdate_stress
+      use ice_boundary, only: ice_HaloUpdate, ice_HaloUpdate_stress, ice_HaloUpdate_multi
       use ice_constants, only: c0, c1, c2, p5, &
           field_loc_unknown, field_loc_noupdate, &
           field_loc_center, field_loc_NEcorner, &
@@ -100,6 +100,15 @@
       integer(int_kind), allocatable :: ti2(:,:,:)
       logical(log_kind) :: topfill
       real(dbl_kind), parameter :: tosentinel = -7777.0_dbl_kind
+
+      ! ice_HaloUpdate_multi tests
+      integer(int_kind), parameter :: maxmf = 6
+      integer(int_kind) :: nmf, kf, mcase, totmc, mccnt
+      integer(int_kind) :: mlocs(maxmf), mtypes(maxmf)
+      integer(int_kind), allocatable :: mcflag(:), mcptcnt(:), mcfailcnt(:)
+      character(len=128), allocatable :: mcstring(:)
+      real(dbl_kind), allocatable :: ma(:,:,:,:), mref(:,:,:,:)   ! multi result, per-field reference
+      real(dbl_kind), parameter :: mcsentinel = -6666.0_dbl_kind
 
       ! debug points
       logical(log_kind), parameter :: debugpts = .false.
@@ -1136,6 +1145,127 @@
       enddo
 
       ! ---------------------------
+      ! TEST ice_HaloUpdate_multi
+      ! ---------------------------
+      ! Lists of 2 to 6 fields with mixed locations and kinds.  The multi-field
+      ! update must give exactly the result of one ice_HaloUpdate per field, in
+      ! every cell including ghost cells.  mcase cycles the starting (loc,type)
+      ! so successive lists mix different combinations.
+
+      totmc = (maxmf-1) * 4 * maxfills
+      allocate(mcflag(totmc), mcptcnt(totmc), mcfailcnt(totmc), mcstring(totmc))
+      mcflag(:) = passflag
+      mcptcnt(:) = 0
+      mcfailcnt(:) = 0
+      allocate(ma(nx_block,ny_block,max_blocks,maxmf), mref(nx_block,ny_block,max_blocks,maxmf))
+
+      mccnt = 0
+      do nmf = 2, maxmf
+      do mcase = 1, 4
+      do nf = 1, maxfills
+         mccnt = mccnt + 1
+         do kf = 1, nmf
+            mlocs(kf)  = field_loc (mod(kf + mcase - 2, maxlocs-1) + 1)        ! center, NEcorn, Nface, Eface
+            mtypes(kf) = field_type(mod(kf + 2*mcase - 3, maxtypes-1) + 1)     ! scalar, vector, angle
+         enddo
+         write(mcstring(mccnt),'(a,i2,a,i2,1x,a,1x,a)') 'MULTI nfld=', nmf, ' case=', mcase, &
+            trim(fill_name(nf)), trim(ns_boundary_type)
+
+         ! unique integer-valued data in the physical domain, sentinel in ghosts
+         ma(:,:,:,:) = mcsentinel
+         do iblock = 1,numBlocks
+            call ice_distributionGetBlockID(distrb_info, iblock, blockID)
+            this_block = get_block(blockID, blockID)
+            do j = this_block%jlo, this_block%jhi
+            do i = this_block%ilo, this_block%ihi
+               gi = nint(cidata_bas(i,j,1,1,iblock) - 11000._dbl_kind)
+               gj = nint(cjdata_bas(i,j,1,1,iblock) - 11000._dbl_kind)
+               do kf = 1, nmf
+                  ma(i,j,iblock,kf) = real(gi + 2000*gj + 1000000*kf, kind=dbl_kind)
+               enddo
+            enddo
+            enddo
+         enddo
+         mref(:,:,:,:) = ma(:,:,:,:)
+
+         ! reference: one update per field
+         do kf = 1, nmf
+            if (nf == 1) then
+               call ice_HaloUpdate(mref(:,:,:,kf), halo_info, mlocs(kf), mtypes(kf), fillValue=dhalofillval)
+            else
+               call ice_HaloUpdate(mref(:,:,:,kf), halo_info, mlocs(kf), mtypes(kf))
+            endif
+         enddo
+
+         ! all fields in one call
+         select case (nmf)
+         case (2)
+            if (nf == 1) then
+               call ice_HaloUpdate_multi(halo_info, mlocs(1:2), mtypes(1:2), ma(:,:,:,1), ma(:,:,:,2), &
+                    fillValue=dhalofillval)
+            else
+               call ice_HaloUpdate_multi(halo_info, mlocs(1:2), mtypes(1:2), ma(:,:,:,1), ma(:,:,:,2))
+            endif
+         case (3)
+            if (nf == 1) then
+               call ice_HaloUpdate_multi(halo_info, mlocs(1:3), mtypes(1:3), ma(:,:,:,1), ma(:,:,:,2), &
+                    ma(:,:,:,3), fillValue=dhalofillval)
+            else
+               call ice_HaloUpdate_multi(halo_info, mlocs(1:3), mtypes(1:3), ma(:,:,:,1), ma(:,:,:,2), &
+                    ma(:,:,:,3))
+            endif
+         case (4)
+            if (nf == 1) then
+               call ice_HaloUpdate_multi(halo_info, mlocs(1:4), mtypes(1:4), ma(:,:,:,1), ma(:,:,:,2), &
+                    ma(:,:,:,3), ma(:,:,:,4), fillValue=dhalofillval)
+            else
+               call ice_HaloUpdate_multi(halo_info, mlocs(1:4), mtypes(1:4), ma(:,:,:,1), ma(:,:,:,2), &
+                    ma(:,:,:,3), ma(:,:,:,4))
+            endif
+         case (5)
+            if (nf == 1) then
+               call ice_HaloUpdate_multi(halo_info, mlocs(1:5), mtypes(1:5), ma(:,:,:,1), ma(:,:,:,2), &
+                    ma(:,:,:,3), ma(:,:,:,4), ma(:,:,:,5), fillValue=dhalofillval)
+            else
+               call ice_HaloUpdate_multi(halo_info, mlocs(1:5), mtypes(1:5), ma(:,:,:,1), ma(:,:,:,2), &
+                    ma(:,:,:,3), ma(:,:,:,4), ma(:,:,:,5))
+            endif
+         case (6)
+            if (nf == 1) then
+               call ice_HaloUpdate_multi(halo_info, mlocs(1:6), mtypes(1:6), ma(:,:,:,1), ma(:,:,:,2), &
+                    ma(:,:,:,3), ma(:,:,:,4), ma(:,:,:,5), ma(:,:,:,6), fillValue=dhalofillval)
+            else
+               call ice_HaloUpdate_multi(halo_info, mlocs(1:6), mtypes(1:6), ma(:,:,:,1), ma(:,:,:,2), &
+                    ma(:,:,:,3), ma(:,:,:,4), ma(:,:,:,5), ma(:,:,:,6))
+            endif
+         end select
+
+         do kf = 1, nmf
+         do iblock = 1,numBlocks
+         do j = 1, ny_block
+         do i = 1, nx_block
+            mcptcnt(mccnt) = mcptcnt(mccnt) + 1
+            call chkresults(ma(i,j,iblock,kf), mref(i,j,iblock,kf), mcflag(mccnt), mccnt, &
+                 mcfailcnt(mccnt), i, j, kf, 1, iblock, first_call, mcstring(mccnt), 'MULTI', -1, -1)
+         enddo
+         enddo
+         enddo
+         enddo
+
+      enddo  ! maxfills
+      enddo  ! mcase
+      enddo  ! nmf
+
+      do n = 1,totmc
+         gflag = global_maxval(mcflag(n), MPI_COMM_ICE)
+         mcflag(n) = gflag
+         ptcntsum = global_sum(mcptcnt(n),distrb_info)
+         mcptcnt(n) = ptcntsum
+         failcntsum = global_sum(mcfailcnt(n),distrb_info)
+         mcfailcnt(n) = failcntsum
+      enddo
+
+      ! ---------------------------
       ! SUMMARY
       ! ---------------------------
 
@@ -1148,6 +1278,7 @@
          failcnt(n) = failcntsum
       enddo
       errorflag0 = maxval(errorflag(:))
+      errorflag0 = max(errorflag0, maxval(mcflag(:)))
       errorflag0 = max(errorflag0, maxval(toflag(:)))
 
       if (my_task == master_task) then
@@ -1172,6 +1303,15 @@
             else
                tfcnt = tfcnt + 1
                write(6,'(2a,2i9)') 'FAIL ',trim(tostring(n)),toptcnt(n),tofailcnt(n)
+            endif
+         enddo
+         do n = 1,totmc
+            if (mcflag(n) == passflag) then
+               tpcnt = tpcnt + 1
+               write(6,'(2a,2i9)') 'PASS ',trim(mcstring(n)),mcptcnt(n),mcfailcnt(n)
+            else
+               tfcnt = tfcnt + 1
+               write(6,'(2a,2i9)') 'FAIL ',trim(mcstring(n)),mcptcnt(n),mcfailcnt(n)
             endif
          enddo
          write(6,*) ' '
