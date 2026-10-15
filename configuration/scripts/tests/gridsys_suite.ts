@@ -96,4 +96,8 @@ smoke          gx1     32x1x16x12 reprosum,run10day,cmplogrest,gridc            
 smoke          tx1m    16x1       reprosum,run10day,gridc  smoke_tx1m_32x1_gridc_reprosum_run10day
 #smoke          gbox80  8x1        debug,boxopen,kmtislands,boxforcee,run1day,evp1d,gridc smoke_gbox80_8x1_boxforcee_boxopen_debug_gridc_kmtislands_run1day
 #smoke          gbox80  8x1        debug,boxopen,kmtislands,boxforcee,run1day,nghost2,evp1d,gridc smoke_gbox80_8x1_boxforcee_boxopen_debug_gridc_kmtislands_nghost2_run1day
+smoke          gx3     1x1x25x29  reprosum,run10day,gridc,evprecompute          smoke_gx3_1x1x100x116_gridc_reprosum_run10day
+smoke          gx3     8x1x5x5    reprosum,run10day,gridc,evprecompute,maskhalo smoke_gx3_1x1x100x116_gridc_reprosum_run10day
+smoke          gx3     8x1x5x5    reprosum,run10day,gridc,evprecompute,nghost2  smoke_gx3_1x1x100x116_gridc_reprosum_run10day
+smoke          tx1m    16x1       reprosum,run10day,gridc,evprecompute          smoke_tx1m_32x1_gridc_reprosum_run10day
 
