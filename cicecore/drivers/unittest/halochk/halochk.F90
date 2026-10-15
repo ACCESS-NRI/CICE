@@ -4,7 +4,7 @@
       use CICE_InitMod
       use ice_kinds_mod, only: int_kind, dbl_kind, real_kind, log_kind
       use ice_blocks, only: block, get_block, nx_block, ny_block, nblocks_tot, nghost, &
-          ew_boundary_type, ns_boundary_type
+          nblocks_y, ew_boundary_type, ns_boundary_type
       use ice_boundary, only: ice_HaloUpdate, ice_HaloUpdate_stress
       use ice_constants, only: c0, c1, c2, p5, &
           field_loc_unknown, field_loc_noupdate, &
@@ -87,6 +87,19 @@
       character(len=32) :: halofld
       logical(log_kind) :: tripole_average, tripole_pole
       logical(log_kind) :: first_call = .true.
+
+      ! tripoleOnly tests
+      integer(int_kind), parameter :: maxkinds = 5
+      character(len=8)  :: kind_name(maxkinds)
+      integer(int_kind) :: nk, kk, nkind, totto, tocnt, gi, gj
+      integer(int_kind), allocatable :: toflag(:), toptcnt(:), tofailcnt(:)
+      character(len=128), allocatable :: tostring(:)
+      real(dbl_kind), allocatable :: wa(:,:,:,:), wf(:,:,:,:), wt(:,:,:,:)  ! input, full, tripoleOnly
+      real(dbl_kind), allocatable :: ta2(:,:,:), ta3(:,:,:,:), ta4(:,:,:,:,:)
+      real(real_kind), allocatable :: tr2(:,:,:)
+      integer(int_kind), allocatable :: ti2(:,:,:)
+      logical(log_kind) :: topfill
+      real(dbl_kind), parameter :: tosentinel = -7777.0_dbl_kind
 
       ! debug points
       logical(log_kind), parameter :: debugpts = .false.
@@ -927,6 +940,202 @@
       enddo  ! maxtests
 
       ! ---------------------------
+      ! TEST tripoleOnly HALO UPDATE
+      ! ---------------------------
+      ! A tripoleOnly update must leave every cell it does not write unchanged,
+      ! every cell it does write must match a full halo update of the same input,
+      ! and on a tripole grid it must write the north ghost rows of top-row blocks.
+      ! Off a tripole grid it must be a no-op.  This holds for any decomposition,
+      ! including tasks with no seam blocks, which exchange no messages.
+
+      kind_name(1) = '2DR8'
+      kind_name(2) = '3DR8'
+      kind_name(3) = '4DR8'
+      kind_name(4) = '2DR4'
+      kind_name(5) = '2DI4'
+      totto = (maxlocs-1) * (maxtypes-1) * maxfills * maxkinds
+      allocate(toflag(totto), toptcnt(totto), tofailcnt(totto), tostring(totto))
+      toflag(:) = passflag
+      toptcnt(:) = 0
+      tofailcnt(:) = 0
+      allocate(wa(nx_block,ny_block,nz1*nz2,max_blocks))
+      allocate(wf(nx_block,ny_block,nz1*nz2,max_blocks))
+      allocate(wt(nx_block,ny_block,nz1*nz2,max_blocks))
+      allocate(ta2(nx_block,ny_block,max_blocks))
+      allocate(ta3(nx_block,ny_block,nz1,max_blocks))
+      allocate(ta4(nx_block,ny_block,nz1,nz2,max_blocks))
+      allocate(tr2(nx_block,ny_block,max_blocks))
+      allocate(ti2(nx_block,ny_block,max_blocks))
+
+      tocnt = 0
+      do nkind = 1, maxkinds
+      do nl = 1, maxlocs-1      ! skip noupdate
+      do nt = 1, maxtypes-1     ! skip noupdate
+      do nf = 1, maxfills
+         tocnt = tocnt + 1
+         topfill = (nf == 1)
+         write(tostring(tocnt),'(a,1x,a,1x,a,1x,a,1x,a,1x,a)') 'TRIPOLEONLY ', &
+            trim(kind_name(nkind)), trim(locs_name(nl)), trim(types_name(nt)), &
+            trim(fill_name(nf)), trim(ns_boundary_type)
+
+         nk = 1
+         if (nkind == 2) nk = nz1
+         if (nkind == 3) nk = nz1*nz2
+
+         ! input: unique integer-valued data in the physical domain, sentinel in ghosts
+         wa(:,:,:,:) = tosentinel
+         do iblock = 1,numBlocks
+            call ice_distributionGetBlockID(distrb_info, iblock, blockID)
+            this_block = get_block(blockID, blockID)
+            do j = this_block%jlo, this_block%jhi
+            do i = this_block%ilo, this_block%ihi
+               gi = nint(cidata_bas(i,j,1,1,iblock) - 11000._dbl_kind)
+               gj = nint(cjdata_bas(i,j,1,1,iblock) - 11000._dbl_kind)
+               do kk = 1, nk
+                  wa(i,j,kk,iblock) = real(gi + 2000*gj + 1000000*kk, kind=dbl_kind)
+               enddo
+            enddo
+            enddo
+         enddo
+
+         ! full update into wf, tripoleOnly update into wt, same input
+         do n = 1, 2
+            select case (nkind)
+            case (1)
+               ta2(:,:,:) = wa(:,:,1,:)
+               if (n == 1) then
+                  if (topfill) then
+                     call ice_HaloUpdate(ta2, halo_info, field_loc(nl), field_type(nt), fillValue=dhalofillval)
+                  else
+                     call ice_HaloUpdate(ta2, halo_info, field_loc(nl), field_type(nt))
+                  endif
+                  wf(:,:,1,:) = ta2(:,:,:)
+               else
+                  if (topfill) then
+                     call ice_HaloUpdate(ta2, halo_info, field_loc(nl), field_type(nt), fillValue=dhalofillval, tripoleOnly=.true.)
+                  else
+                     call ice_HaloUpdate(ta2, halo_info, field_loc(nl), field_type(nt), tripoleOnly=.true.)
+                  endif
+                  wt(:,:,1,:) = ta2(:,:,:)
+               endif
+            case (2)
+               ta3(:,:,:,:) = wa(:,:,1:nz1,:)
+               if (n == 1) then
+                  if (topfill) then
+                     call ice_HaloUpdate(ta3, halo_info, field_loc(nl), field_type(nt), fillValue=dhalofillval)
+                  else
+                     call ice_HaloUpdate(ta3, halo_info, field_loc(nl), field_type(nt))
+                  endif
+                  wf(:,:,1:nz1,:) = ta3(:,:,:,:)
+               else
+                  if (topfill) then
+                     call ice_HaloUpdate(ta3, halo_info, field_loc(nl), field_type(nt), fillValue=dhalofillval, tripoleOnly=.true.)
+                  else
+                     call ice_HaloUpdate(ta3, halo_info, field_loc(nl), field_type(nt), tripoleOnly=.true.)
+                  endif
+                  wt(:,:,1:nz1,:) = ta3(:,:,:,:)
+               endif
+            case (3)
+               ta4(:,:,:,:,:) = reshape(wa, shape(ta4))
+               if (n == 1) then
+                  if (topfill) then
+                     call ice_HaloUpdate(ta4, halo_info, field_loc(nl), field_type(nt), fillValue=dhalofillval)
+                  else
+                     call ice_HaloUpdate(ta4, halo_info, field_loc(nl), field_type(nt))
+                  endif
+                  wf(:,:,:,:) = reshape(ta4, shape(wf))
+               else
+                  if (topfill) then
+                     call ice_HaloUpdate(ta4, halo_info, field_loc(nl), field_type(nt), fillValue=dhalofillval, tripoleOnly=.true.)
+                  else
+                     call ice_HaloUpdate(ta4, halo_info, field_loc(nl), field_type(nt), tripoleOnly=.true.)
+                  endif
+                  wt(:,:,:,:) = reshape(ta4, shape(wt))
+               endif
+            case (4)
+               tr2(:,:,:) = real(wa(:,:,1,:), kind=real_kind)
+               if (n == 1) then
+                  if (topfill) then
+                     call ice_HaloUpdate(tr2, halo_info, field_loc(nl), field_type(nt), fillValue=rhalofillval)
+                  else
+                     call ice_HaloUpdate(tr2, halo_info, field_loc(nl), field_type(nt))
+                  endif
+                  wf(:,:,1,:) = real(tr2(:,:,:), kind=dbl_kind)
+               else
+                  if (topfill) then
+                     call ice_HaloUpdate(tr2, halo_info, field_loc(nl), field_type(nt), fillValue=rhalofillval, tripoleOnly=.true.)
+                  else
+                     call ice_HaloUpdate(tr2, halo_info, field_loc(nl), field_type(nt), tripoleOnly=.true.)
+                  endif
+                  wt(:,:,1,:) = real(tr2(:,:,:), kind=dbl_kind)
+               endif
+            case (5)
+               ti2(:,:,:) = nint(wa(:,:,1,:))
+               if (n == 1) then
+                  if (topfill) then
+                     call ice_HaloUpdate(ti2, halo_info, field_loc(nl), field_type(nt), fillValue=ihalofillval)
+                  else
+                     call ice_HaloUpdate(ti2, halo_info, field_loc(nl), field_type(nt))
+                  endif
+                  wf(:,:,1,:) = real(ti2(:,:,:), kind=dbl_kind)
+               else
+                  if (topfill) then
+                     call ice_HaloUpdate(ti2, halo_info, field_loc(nl), field_type(nt), fillValue=ihalofillval, tripoleOnly=.true.)
+                  else
+                     call ice_HaloUpdate(ti2, halo_info, field_loc(nl), field_type(nt), tripoleOnly=.true.)
+                  endif
+                  wt(:,:,1,:) = real(ti2(:,:,:), kind=dbl_kind)
+               endif
+            end select
+         enddo
+
+         ! check every cell, ghost cells included
+         do iblock = 1,numBlocks
+            call ice_distributionGetBlockID(distrb_info, iblock, blockID)
+            this_block = get_block(blockID, blockID)
+            do kk = 1, nk
+            do j = 1, ny_block
+            do i = 1, nx_block
+               toptcnt(tocnt) = toptcnt(tocnt) + 1
+               if (ns_boundary_type /= 'tripole' .and. ns_boundary_type /= 'tripoleT') then
+                  ! not a tripole grid: no-op
+                  call chkresults(wt(i,j,kk,iblock), wa(i,j,kk,iblock), toflag(tocnt), tocnt, &
+                       tofailcnt(tocnt), i, j, kk, 1, iblock, first_call, tostring(tocnt), 'TONOOP', -1, -1)
+               elseif (this_block%jblock == nblocks_y .and. &
+                       j > this_block%jhi .and. j <= this_block%jhi + nghost .and. &
+                       i >= this_block%ilo .and. i <= this_block%ihi) then
+                  ! north ghost rows on the seam: must be written
+                  call chkresults(wt(i,j,kk,iblock), wf(i,j,kk,iblock), toflag(tocnt), tocnt, &
+                       tofailcnt(tocnt), i, j, kk, 1, iblock, first_call, tostring(tocnt), 'TOSEAM', -1, -1)
+               elseif (this_block%jblock /= nblocks_y) then
+                  ! not a seam block: untouched
+                  call chkresults(wt(i,j,kk,iblock), wa(i,j,kk,iblock), toflag(tocnt), tocnt, &
+                       tofailcnt(tocnt), i, j, kk, 1, iblock, first_call, tostring(tocnt), 'TOUNTCH', -1, -1)
+               elseif (wt(i,j,kk,iblock) /= wa(i,j,kk,iblock)) then
+                  ! elsewhere on a seam block: if written, must match the full update
+                  call chkresults(wt(i,j,kk,iblock), wf(i,j,kk,iblock), toflag(tocnt), tocnt, &
+                       tofailcnt(tocnt), i, j, kk, 1, iblock, first_call, tostring(tocnt), 'TOWRITE', -1, -1)
+               endif
+            enddo
+            enddo
+            enddo
+         enddo
+
+      enddo  ! maxfills
+      enddo  ! maxtypes
+      enddo  ! maxlocs
+      enddo  ! maxkinds
+
+      do n = 1,totto
+         gflag = global_maxval(toflag(n), MPI_COMM_ICE)
+         toflag(n) = gflag
+         ptcntsum = global_sum(toptcnt(n),distrb_info)
+         toptcnt(n) = ptcntsum
+         failcntsum = global_sum(tofailcnt(n),distrb_info)
+         tofailcnt(n) = failcntsum
+      enddo
+
+      ! ---------------------------
       ! SUMMARY
       ! ---------------------------
 
@@ -939,6 +1148,7 @@
          failcnt(n) = failcntsum
       enddo
       errorflag0 = maxval(errorflag(:))
+      errorflag0 = max(errorflag0, maxval(toflag(:)))
 
       if (my_task == master_task) then
          write(6,*) ' '
@@ -953,6 +1163,15 @@
             else
                tfcnt = tfcnt + 1
                write(6,'(2a,2i9)') 'FAIL ',trim(teststring(n)),ptcnt(n),failcnt(n)
+            endif
+         enddo
+         do n = 1,totto
+            if (toflag(n) == passflag) then
+               tpcnt = tpcnt + 1
+               write(6,'(2a,2i9)') 'PASS ',trim(tostring(n)),toptcnt(n),tofailcnt(n)
+            else
+               tfcnt = tfcnt + 1
+               write(6,'(2a,2i9)') 'FAIL ',trim(tostring(n)),toptcnt(n),tofailcnt(n)
             endif
          enddo
          write(6,*) ' '

@@ -93,7 +93,9 @@
          tripoleRows        ! number of rows in tripole buffer
 
       logical (log_kind) ::  &
-         tripoleTFlag       ! NS boundary is a tripole T-fold
+         tripoleTFlag,     &! NS boundary is a tripole T-fold
+         tripoleActive      ! this task uses the tripole buffer (receives
+                            ! seam data or copies through the buffer)
 
       integer (int_kind), dimension(:), pointer :: &
          blockGlobalID      ! list of local block global IDs, needed for halo fill
@@ -880,6 +882,8 @@ contains
 
    end do msgConfigLoop
 
+   call ice_HaloSetTripoleActive(halo)
+
 !-----------------------------------------------------------------------
 
  end function ice_HaloCreate
@@ -1057,9 +1061,46 @@ contains
    halo%numMsgRecv = numMsgRecv
 #endif
 
+   call ice_HaloSetTripoleActive(halo)
+
 !-----------------------------------------------------------------------
 
  end subroutine ice_HaloMask
+
+!***********************************************************************
+!  Set halo%tripoleActive.  Only a task that receives tripole data or
+!  makes a local copy into or out of the tripole buffer reads the buffer,
+!  so other tasks can skip allocating, filling and folding it.
+
+ subroutine ice_HaloSetTripoleActive(halo)
+
+   type (ice_halo), intent(inout) :: &
+      halo                 ! halo to set tripoleActive in
+
+   integer (int_kind) :: n
+
+   character(len=*), parameter :: subname = '(ice_HaloSetTripoleActive)'
+
+   halo%tripoleActive = .false.
+   if (nxGlobal_size <= 0) return
+
+   do n = 1, halo%numLocalCopies
+      if (halo%srcLocalAddr(3,n) < 0 .or. halo%dstLocalAddr(3,n) < 0) then
+         halo%tripoleActive = .true.
+         return
+      endif
+   enddo
+
+#ifndef NO_MPI
+   do n = 1, halo%numMsgRecv
+      if (halo%tripRecv(n) /= 0) then
+         halo%tripoleActive = .true.
+         return
+      endif
+   enddo
+#endif
+
+ end subroutine ice_HaloSetTripoleActive
 
 !***********************************************************************
 ! autogenerate start
@@ -1202,7 +1243,7 @@ contains
    nt = 1
 
    nxGlobal = 0
-   if (nxGlobal_size > 0) then
+   if (nxGlobal_size > 0 .and. halo%tripoleActive) then
       nxGlobal = nxGlobal_size
       allocate(bufTripole(nxGlobal,halo%tripoleRows,nz,nt),stat=istat)
       if (istat > 0) then
@@ -1246,6 +1287,11 @@ contains
 !-----------------------------------------------------------------------
 
    do nmsg=1,halo%numMsgRecv
+      if (ltripoleOnly .and. halo%tripRecv(nmsg) == 0) then
+         ! tripoleOnly: no tripole data in this message, skip it
+         rcvRequest(nmsg) = MPI_REQUEST_NULL
+         cycle
+      endif
       len = halo%SizeRecv(nmsg)*nz*nt
       call MPI_IRECV(bufRecv(1,nmsg), len, mpiR8,  &
                      halo%recvTask(nmsg),              &
@@ -1260,6 +1306,11 @@ contains
 !-----------------------------------------------------------------------
 
    do nmsg=1,halo%numMsgSend
+      if (ltripoleOnly .and. halo%tripSend(nmsg) == 0) then
+         ! tripoleOnly: no tripole data in this message, skip it
+         sndRequest(nmsg) = MPI_REQUEST_NULL
+         cycle
+      endif
       i=0
       do n=1,halo%sizeSend(nmsg)
          iSrc     = halo%sendAddr(1,n,nmsg)
@@ -1421,6 +1472,7 @@ contains
    call MPI_WAITALL(halo%numMsgRecv, rcvRequest, rcvStatus, ierr)
 
    do nmsg=1,halo%numMsgRecv
+      if (ltripoleOnly .and. halo%tripRecv(nmsg) == 0) cycle  ! not received
       i = 0
       do n=1,halo%sizeRecv(nmsg)
          iDst     = halo%recvAddr(1,n,nmsg)
@@ -1900,7 +1952,7 @@ contains
    nt = 1
 
    nxGlobal = 0
-   if (nxGlobal_size > 0) then
+   if (nxGlobal_size > 0 .and. halo%tripoleActive) then
       nxGlobal = nxGlobal_size
       allocate(bufTripole(nxGlobal,halo%tripoleRows,nz,nt),stat=istat)
       if (istat > 0) then
@@ -1944,6 +1996,11 @@ contains
 !-----------------------------------------------------------------------
 
    do nmsg=1,halo%numMsgRecv
+      if (ltripoleOnly .and. halo%tripRecv(nmsg) == 0) then
+         ! tripoleOnly: no tripole data in this message, skip it
+         rcvRequest(nmsg) = MPI_REQUEST_NULL
+         cycle
+      endif
       len = halo%SizeRecv(nmsg)*nz*nt
       call MPI_IRECV(bufRecv(1,nmsg), len, mpiR4,  &
                      halo%recvTask(nmsg),              &
@@ -1958,6 +2015,11 @@ contains
 !-----------------------------------------------------------------------
 
    do nmsg=1,halo%numMsgSend
+      if (ltripoleOnly .and. halo%tripSend(nmsg) == 0) then
+         ! tripoleOnly: no tripole data in this message, skip it
+         sndRequest(nmsg) = MPI_REQUEST_NULL
+         cycle
+      endif
       i=0
       do n=1,halo%sizeSend(nmsg)
          iSrc     = halo%sendAddr(1,n,nmsg)
@@ -2119,6 +2181,7 @@ contains
    call MPI_WAITALL(halo%numMsgRecv, rcvRequest, rcvStatus, ierr)
 
    do nmsg=1,halo%numMsgRecv
+      if (ltripoleOnly .and. halo%tripRecv(nmsg) == 0) cycle  ! not received
       i = 0
       do n=1,halo%sizeRecv(nmsg)
          iDst     = halo%recvAddr(1,n,nmsg)
@@ -2598,7 +2661,7 @@ contains
    nt = 1
 
    nxGlobal = 0
-   if (nxGlobal_size > 0) then
+   if (nxGlobal_size > 0 .and. halo%tripoleActive) then
       nxGlobal = nxGlobal_size
       allocate(bufTripole(nxGlobal,halo%tripoleRows,nz,nt),stat=istat)
       if (istat > 0) then
@@ -2642,6 +2705,11 @@ contains
 !-----------------------------------------------------------------------
 
    do nmsg=1,halo%numMsgRecv
+      if (ltripoleOnly .and. halo%tripRecv(nmsg) == 0) then
+         ! tripoleOnly: no tripole data in this message, skip it
+         rcvRequest(nmsg) = MPI_REQUEST_NULL
+         cycle
+      endif
       len = halo%SizeRecv(nmsg)*nz*nt
       call MPI_IRECV(bufRecv(1,nmsg), len, MPI_INTEGER,  &
                      halo%recvTask(nmsg),              &
@@ -2656,6 +2724,11 @@ contains
 !-----------------------------------------------------------------------
 
    do nmsg=1,halo%numMsgSend
+      if (ltripoleOnly .and. halo%tripSend(nmsg) == 0) then
+         ! tripoleOnly: no tripole data in this message, skip it
+         sndRequest(nmsg) = MPI_REQUEST_NULL
+         cycle
+      endif
       i=0
       do n=1,halo%sizeSend(nmsg)
          iSrc     = halo%sendAddr(1,n,nmsg)
@@ -2817,6 +2890,7 @@ contains
    call MPI_WAITALL(halo%numMsgRecv, rcvRequest, rcvStatus, ierr)
 
    do nmsg=1,halo%numMsgRecv
+      if (ltripoleOnly .and. halo%tripRecv(nmsg) == 0) cycle  ! not received
       i = 0
       do n=1,halo%sizeRecv(nmsg)
          iDst     = halo%recvAddr(1,n,nmsg)
@@ -3385,7 +3459,7 @@ contains
    nt = 1
 
    nxGlobal = 0
-   if (nxGlobal_size > 0) then
+   if (nxGlobal_size > 0 .and. halo%tripoleActive) then
       nxGlobal = nxGlobal_size
       allocate(bufTripole(nxGlobal,halo%tripoleRows,nz,nt),stat=istat)
       if (istat > 0) then
@@ -3429,6 +3503,11 @@ contains
 !-----------------------------------------------------------------------
 
    do nmsg=1,halo%numMsgRecv
+      if (ltripoleOnly .and. halo%tripRecv(nmsg) == 0) then
+         ! tripoleOnly: no tripole data in this message, skip it
+         rcvRequest(nmsg) = MPI_REQUEST_NULL
+         cycle
+      endif
       len = halo%SizeRecv(nmsg)*nz*nt
       call MPI_IRECV(bufRecv(1,nmsg), len, mpiR8,  &
                      halo%recvTask(nmsg),              &
@@ -3443,6 +3522,11 @@ contains
 !-----------------------------------------------------------------------
 
    do nmsg=1,halo%numMsgSend
+      if (ltripoleOnly .and. halo%tripSend(nmsg) == 0) then
+         ! tripoleOnly: no tripole data in this message, skip it
+         sndRequest(nmsg) = MPI_REQUEST_NULL
+         cycle
+      endif
       i=0
       do n=1,halo%sizeSend(nmsg)
          iSrc     = halo%sendAddr(1,n,nmsg)
@@ -3604,6 +3688,7 @@ contains
    call MPI_WAITALL(halo%numMsgRecv, rcvRequest, rcvStatus, ierr)
 
    do nmsg=1,halo%numMsgRecv
+      if (ltripoleOnly .and. halo%tripRecv(nmsg) == 0) cycle  ! not received
       i = 0
       do n=1,halo%sizeRecv(nmsg)
          iDst     = halo%recvAddr(1,n,nmsg)
@@ -4083,7 +4168,7 @@ contains
    nt = 1
 
    nxGlobal = 0
-   if (nxGlobal_size > 0) then
+   if (nxGlobal_size > 0 .and. halo%tripoleActive) then
       nxGlobal = nxGlobal_size
       allocate(bufTripole(nxGlobal,halo%tripoleRows,nz,nt),stat=istat)
       if (istat > 0) then
@@ -4127,6 +4212,11 @@ contains
 !-----------------------------------------------------------------------
 
    do nmsg=1,halo%numMsgRecv
+      if (ltripoleOnly .and. halo%tripRecv(nmsg) == 0) then
+         ! tripoleOnly: no tripole data in this message, skip it
+         rcvRequest(nmsg) = MPI_REQUEST_NULL
+         cycle
+      endif
       len = halo%SizeRecv(nmsg)*nz*nt
       call MPI_IRECV(bufRecv(1,nmsg), len, mpiR4,  &
                      halo%recvTask(nmsg),              &
@@ -4141,6 +4231,11 @@ contains
 !-----------------------------------------------------------------------
 
    do nmsg=1,halo%numMsgSend
+      if (ltripoleOnly .and. halo%tripSend(nmsg) == 0) then
+         ! tripoleOnly: no tripole data in this message, skip it
+         sndRequest(nmsg) = MPI_REQUEST_NULL
+         cycle
+      endif
       i=0
       do n=1,halo%sizeSend(nmsg)
          iSrc     = halo%sendAddr(1,n,nmsg)
@@ -4302,6 +4397,7 @@ contains
    call MPI_WAITALL(halo%numMsgRecv, rcvRequest, rcvStatus, ierr)
 
    do nmsg=1,halo%numMsgRecv
+      if (ltripoleOnly .and. halo%tripRecv(nmsg) == 0) cycle  ! not received
       i = 0
       do n=1,halo%sizeRecv(nmsg)
          iDst     = halo%recvAddr(1,n,nmsg)
@@ -4781,7 +4877,7 @@ contains
    nt = 1
 
    nxGlobal = 0
-   if (nxGlobal_size > 0) then
+   if (nxGlobal_size > 0 .and. halo%tripoleActive) then
       nxGlobal = nxGlobal_size
       allocate(bufTripole(nxGlobal,halo%tripoleRows,nz,nt),stat=istat)
       if (istat > 0) then
@@ -4825,6 +4921,11 @@ contains
 !-----------------------------------------------------------------------
 
    do nmsg=1,halo%numMsgRecv
+      if (ltripoleOnly .and. halo%tripRecv(nmsg) == 0) then
+         ! tripoleOnly: no tripole data in this message, skip it
+         rcvRequest(nmsg) = MPI_REQUEST_NULL
+         cycle
+      endif
       len = halo%SizeRecv(nmsg)*nz*nt
       call MPI_IRECV(bufRecv(1,nmsg), len, MPI_INTEGER,  &
                      halo%recvTask(nmsg),              &
@@ -4839,6 +4940,11 @@ contains
 !-----------------------------------------------------------------------
 
    do nmsg=1,halo%numMsgSend
+      if (ltripoleOnly .and. halo%tripSend(nmsg) == 0) then
+         ! tripoleOnly: no tripole data in this message, skip it
+         sndRequest(nmsg) = MPI_REQUEST_NULL
+         cycle
+      endif
       i=0
       do n=1,halo%sizeSend(nmsg)
          iSrc     = halo%sendAddr(1,n,nmsg)
@@ -5000,6 +5106,7 @@ contains
    call MPI_WAITALL(halo%numMsgRecv, rcvRequest, rcvStatus, ierr)
 
    do nmsg=1,halo%numMsgRecv
+      if (ltripoleOnly .and. halo%tripRecv(nmsg) == 0) cycle  ! not received
       i = 0
       do n=1,halo%sizeRecv(nmsg)
          iDst     = halo%recvAddr(1,n,nmsg)
@@ -5479,7 +5586,7 @@ contains
    nt = size(array, dim=4)
 
    nxGlobal = 0
-   if (nxGlobal_size > 0) then
+   if (nxGlobal_size > 0 .and. halo%tripoleActive) then
       nxGlobal = nxGlobal_size
       allocate(bufTripole(nxGlobal,halo%tripoleRows,nz,nt),stat=istat)
       if (istat > 0) then
@@ -5523,6 +5630,11 @@ contains
 !-----------------------------------------------------------------------
 
    do nmsg=1,halo%numMsgRecv
+      if (ltripoleOnly .and. halo%tripRecv(nmsg) == 0) then
+         ! tripoleOnly: no tripole data in this message, skip it
+         rcvRequest(nmsg) = MPI_REQUEST_NULL
+         cycle
+      endif
       len = halo%SizeRecv(nmsg)*nz*nt
       call MPI_IRECV(bufRecv(1,nmsg), len, mpiR8,  &
                      halo%recvTask(nmsg),              &
@@ -5537,6 +5649,11 @@ contains
 !-----------------------------------------------------------------------
 
    do nmsg=1,halo%numMsgSend
+      if (ltripoleOnly .and. halo%tripSend(nmsg) == 0) then
+         ! tripoleOnly: no tripole data in this message, skip it
+         sndRequest(nmsg) = MPI_REQUEST_NULL
+         cycle
+      endif
       i=0
       do n=1,halo%sizeSend(nmsg)
          iSrc     = halo%sendAddr(1,n,nmsg)
@@ -5698,6 +5815,7 @@ contains
    call MPI_WAITALL(halo%numMsgRecv, rcvRequest, rcvStatus, ierr)
 
    do nmsg=1,halo%numMsgRecv
+      if (ltripoleOnly .and. halo%tripRecv(nmsg) == 0) cycle  ! not received
       i = 0
       do n=1,halo%sizeRecv(nmsg)
          iDst     = halo%recvAddr(1,n,nmsg)
@@ -6177,7 +6295,7 @@ contains
    nt = size(array, dim=4)
 
    nxGlobal = 0
-   if (nxGlobal_size > 0) then
+   if (nxGlobal_size > 0 .and. halo%tripoleActive) then
       nxGlobal = nxGlobal_size
       allocate(bufTripole(nxGlobal,halo%tripoleRows,nz,nt),stat=istat)
       if (istat > 0) then
@@ -6221,6 +6339,11 @@ contains
 !-----------------------------------------------------------------------
 
    do nmsg=1,halo%numMsgRecv
+      if (ltripoleOnly .and. halo%tripRecv(nmsg) == 0) then
+         ! tripoleOnly: no tripole data in this message, skip it
+         rcvRequest(nmsg) = MPI_REQUEST_NULL
+         cycle
+      endif
       len = halo%SizeRecv(nmsg)*nz*nt
       call MPI_IRECV(bufRecv(1,nmsg), len, mpiR4,  &
                      halo%recvTask(nmsg),              &
@@ -6235,6 +6358,11 @@ contains
 !-----------------------------------------------------------------------
 
    do nmsg=1,halo%numMsgSend
+      if (ltripoleOnly .and. halo%tripSend(nmsg) == 0) then
+         ! tripoleOnly: no tripole data in this message, skip it
+         sndRequest(nmsg) = MPI_REQUEST_NULL
+         cycle
+      endif
       i=0
       do n=1,halo%sizeSend(nmsg)
          iSrc     = halo%sendAddr(1,n,nmsg)
@@ -6396,6 +6524,7 @@ contains
    call MPI_WAITALL(halo%numMsgRecv, rcvRequest, rcvStatus, ierr)
 
    do nmsg=1,halo%numMsgRecv
+      if (ltripoleOnly .and. halo%tripRecv(nmsg) == 0) cycle  ! not received
       i = 0
       do n=1,halo%sizeRecv(nmsg)
          iDst     = halo%recvAddr(1,n,nmsg)
@@ -6875,7 +7004,7 @@ contains
    nt = size(array, dim=4)
 
    nxGlobal = 0
-   if (nxGlobal_size > 0) then
+   if (nxGlobal_size > 0 .and. halo%tripoleActive) then
       nxGlobal = nxGlobal_size
       allocate(bufTripole(nxGlobal,halo%tripoleRows,nz,nt),stat=istat)
       if (istat > 0) then
@@ -6919,6 +7048,11 @@ contains
 !-----------------------------------------------------------------------
 
    do nmsg=1,halo%numMsgRecv
+      if (ltripoleOnly .and. halo%tripRecv(nmsg) == 0) then
+         ! tripoleOnly: no tripole data in this message, skip it
+         rcvRequest(nmsg) = MPI_REQUEST_NULL
+         cycle
+      endif
       len = halo%SizeRecv(nmsg)*nz*nt
       call MPI_IRECV(bufRecv(1,nmsg), len, MPI_INTEGER,  &
                      halo%recvTask(nmsg),              &
@@ -6933,6 +7067,11 @@ contains
 !-----------------------------------------------------------------------
 
    do nmsg=1,halo%numMsgSend
+      if (ltripoleOnly .and. halo%tripSend(nmsg) == 0) then
+         ! tripoleOnly: no tripole data in this message, skip it
+         sndRequest(nmsg) = MPI_REQUEST_NULL
+         cycle
+      endif
       i=0
       do n=1,halo%sizeSend(nmsg)
          iSrc     = halo%sendAddr(1,n,nmsg)
@@ -7094,6 +7233,7 @@ contains
    call MPI_WAITALL(halo%numMsgRecv, rcvRequest, rcvStatus, ierr)
 
    do nmsg=1,halo%numMsgRecv
+      if (ltripoleOnly .and. halo%tripRecv(nmsg) == 0) cycle  ! not received
       i = 0
       do n=1,halo%sizeRecv(nmsg)
          iDst     = halo%recvAddr(1,n,nmsg)
@@ -7535,7 +7675,7 @@ contains
    endif
 
    nxGlobal = 0
-   if (nxGlobal_size > 0) then
+   if (nxGlobal_size > 0 .and. halo%tripoleActive) then
       nxGlobal = nxGlobal_size
       allocate(bufTripole(nxGlobal,halo%tripoleRows), stat=istat)
       if (istat > 0) then
