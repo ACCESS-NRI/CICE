@@ -118,6 +118,7 @@
          umassdti (:,:,:)     ! mass of U-cell/dte (kg/m^2 s)
 
       public :: evp, init_evp
+      public :: aiE, aiN  ! used to map strocn E/N to T for coupling
 
 !=======================================================================
 
