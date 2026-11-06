@@ -691,6 +691,7 @@ forcing_nml
    commented out
    "``calc_dragio``", "logical", "compute dragio from iceruf_ocean and thickness of first ocean level, not supported", "``.false.``"
    "``iceruf_ocn``", "real", "under ice roughness in meters, not supported", "0.03"
+   "``thickness_ocn_layer1``", "real", "thickness of the first ocean level in meters used with ``calc_dragio``, if <= 0 it is set from the ocean levels in the bathymetry setup", "0.0"
    commented out
 
 .. csv-table:: **forcing_nml namelist options**

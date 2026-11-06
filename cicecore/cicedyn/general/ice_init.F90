@@ -108,7 +108,7 @@
       use ice_grid, only: &
           grid_file, gridcpl_file, kmt_file, &
           bathymetry_file, use_bathymetry, &
-          bathymetry_format, kmt_type, &
+          bathymetry_format, kmt_type, thickness_ocn_layer1, &
           grid_type, grid_format, grid_outfile, &
           grid_ice, grid_ice_thrm, grid_ice_dynu, grid_ice_dynv, &
           grid_ocn, grid_ocn_thrm, grid_ocn_dynu, grid_ocn_dynv, &
@@ -289,6 +289,7 @@
         formdrag,       atmbndy,         calc_strair,   calc_Tsfc,      &
         highfreq,       natmiter,        atmiter_conv,  calc_dragio,    &
         ustar_min,      emissivity,      iceruf,        iceruf_ocn,     &
+        thickness_ocn_layer1,                                           &
         fbot_xfer_type, update_ocn_f,    l_mpond_fresh, tfrz_option,    &
         saltflux_option,ice_ref_salinity,cpl_frazil,    congel_freeze,  &
         restore_ice,    restore_data,    restore_mask,  restore_width,  &
@@ -503,6 +504,7 @@
       iceruf = 0.0005_dbl_kind ! ice surface roughness at atmosphere interface (m)
       iceruf_ocn = 0.03_dbl_kind ! under-ice roughness (m)
       calc_dragio = .false.    ! compute dragio from iceruf_ocn and thickness of first ocean level
+      thickness_ocn_layer1 = c0 ! thickness of first ocean level for calc_dragio (m), <= 0 sets it from the ocean levels
       emissivity = 0.985       ! emissivity of snow and ice
       l_mpond_fresh = .false.  ! logical switch for including meltpond freshwater
                                ! flux feedback to ocean model
@@ -1190,6 +1192,7 @@
       call broadcast_scalar(iceruf,               master_task)
       call broadcast_scalar(iceruf_ocn,           master_task)
       call broadcast_scalar(calc_dragio,          master_task)
+      call broadcast_scalar(thickness_ocn_layer1, master_task)
       call broadcast_scalar(emissivity,           master_task)
       call broadcast_scalar(fbot_xfer_type,       master_task)
       call broadcast_scalar(precip_units,         master_task)
@@ -1820,6 +1823,11 @@
             write(nu_diag,*) subname//' WARNING:   setting atmbndy = similarity'
          endif
          atmbndy = 'similarity'
+      endif
+
+      if (calc_dragio .and. thickness_ocn_layer1 > c0 .and. thickness_ocn_layer1 <= c2*iceruf_ocn) then
+         if (my_task == master_task) write(nu_diag,*) subname//' ERROR: thickness_ocn_layer1 must be greater than 2*iceruf_ocn'
+         abort_list = trim(abort_list)//":66"
       endif
 
       if (formdrag) then
@@ -2539,6 +2547,11 @@
          write(nu_diag,1010) ' calc_dragio   = ', calc_dragio,trim(tmpstr2)
          if (calc_dragio) then
             write(nu_diag,1002) ' iceruf_ocn       = ', iceruf_ocn,' : under-ice roughness length'
+            if (thickness_ocn_layer1 > c0) then
+               write(nu_diag,1002) ' thickness_ocn_layer1 = ', thickness_ocn_layer1,' : thickness of first ocean level (m)'
+            else
+               write(nu_diag,*) ' thickness_ocn_layer1 set from the ocean levels in get_bathymetry'
+            endif
          endif
 
          write(nu_diag,*) ' '
@@ -2970,6 +2983,9 @@
          snwredist_in=snwredist, snwgrain_in=snwgrain, snw_aging_table_in=trim(snw_aging_table), &
          sw_redist_in=sw_redist, sw_frac_in=sw_frac, sw_dtemp_in=sw_dtemp, &
          tscale_pnd_drain_in=tscale_pnd_drain)
+      if (thickness_ocn_layer1 > c0) then
+         call icepack_init_parameters(thickness_ocn_layer1_in=thickness_ocn_layer1)
+      endif
       call icepack_init_tracer_flags(tr_iage_in=tr_iage, tr_FY_in=tr_FY, &
          tr_lvl_in=tr_lvl, tr_iso_in=tr_iso, tr_aero_in=tr_aero, &
          tr_fsd_in=tr_fsd, tr_snow_in=tr_snow, tr_pond_in=tr_pond, &
