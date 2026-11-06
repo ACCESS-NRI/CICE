@@ -336,19 +336,13 @@ if(CICE_ACCESS3)
   # way of handling them in CMake
   target_include_directories(cicelib PUBLIC "$<INSTALL_INTERFACE:${CMAKE_INSTALL_MODULEDIR}/cicelib>")
   get_target_property(cice_moddir cicelib Fortran_MODULE_DIRECTORY)
-  if(CMAKE_Fortran_COMPILER_ID MATCHES "NVHPC")
     # nvfortran .mod files are not self-contained: using a module also needs
     # the .mod files of every module it uses, so install them all
-    install(DIRECTORY ${cice_moddir}/
-      DESTINATION ${CMAKE_INSTALL_MODULEDIR}/cicelib
-      COMPONENT AccessCICECmeps_Development
-    )
-  else()
-    install(FILES ${cice_moddir}/ice_comp_nuopc.mod
-      DESTINATION ${CMAKE_INSTALL_MODULEDIR}/cicelib
-      COMPONENT AccessCICECmeps_Development
-    )
-  endif()
+  install(DIRECTORY ${cice_moddir}/
+    DESTINATION ${CMAKE_INSTALL_MODULEDIR}/cicelib
+    COMPONENT AccessCICECmeps_Development
+    FILES_MATCHING PATTERN "*.mod"
+  )
   install(EXPORT CicelibTargets
     FILE CicelibTargets.cmake
     NAMESPACE Access3::
