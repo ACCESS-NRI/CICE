@@ -1230,7 +1230,7 @@
 !         write(nu_diag,*) subname,' missingvalue= ',missingvalue
          allocate(mask(nx,ny))
          if ( ieee_is_nan(missingvalue) ) then
-            mask = ieee_is_nan(work_g1)
+            mask = .not. ieee_is_nan(work_g1)
          else
             mask = work_g1 /= missingvalue
          endif
@@ -1420,7 +1420,7 @@
          allocate(mask(nx,ny))
          do n=1,ncat
             if ( ieee_is_nan(missingvalue) ) then
-               mask = ieee_is_nan(work_g1(:,:,n))
+               mask = .not. ieee_is_nan(work_g1(:,:,n))
             else
                mask = work_g1(:,:,n) /= missingvalue
             endif
@@ -1622,7 +1622,7 @@
          allocate(mask(nx,ny))
          do n=1,ncat
             if ( ieee_is_nan(missingvalue) ) then
-               mask = ieee_is_nan(work_g1(:,:,n))
+               mask = .not. ieee_is_nan(work_g1(:,:,n))
             else
                mask = work_g1(:,:,n) /= missingvalue
             endif
