@@ -64,6 +64,10 @@ elseif(CMAKE_Fortran_COMPILER_ID MATCHES "Intel")
   set(CMAKE_Fortran_FLAGS "${CMAKE_Fortran_FLAGS} -qno-opt-dynamic-align -convert big_endian -assume byterecl -ftz -traceback -assume realloc_lhs -fp-model precise -qopenmp-simd -g -grecord-gcc-switches")
   set(CMAKE_Fortran_FLAGS_RELEASE "-O2")
   set(CMAKE_Fortran_FLAGS_DEBUG "-O0 -check all -fpe0 -check noarg_temp_created")
+elseif(CMAKE_Fortran_COMPILER_ID MATCHES "NVHPC")
+  set(CMAKE_Fortran_FLAGS "${CMAKE_Fortran_FLAGS} -byteswapio -Mflushz -traceback -Kieee -gopt")
+  set(CMAKE_Fortran_FLAGS_RELEASE "-O2")
+  set(CMAKE_Fortran_FLAGS_DEBUG "-O0 -Mbounds -Mchkptr -Ktrap=fp")
 else()
   message(WARNING "Fortran compiler with ID ${CMAKE_Fortran_COMPILER_ID} will be used with CMake default options")
 endif()
@@ -74,6 +78,10 @@ if(CMAKE_C_COMPILER_ID MATCHES "GNU")
   set(CMAKE_C_FLAGS_DEBUG "-Wall -Og -fbacktrace -ffpe-trap=invalid,zero,overflow -fcheck=bounds")
 elseif(CMAKE_C_COMPILER_ID MATCHES "Intel")
   set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -traceback -qno-opt-dynamic-align -fp-model precise -std=gnu99 -g -grecord-gcc-switches")
+  set(CMAKE_C_FLAGS_RELEASE "-O2")
+  set(CMAKE_C_FLAGS_DEBUG "-O0")
+elseif(CMAKE_C_COMPILER_ID MATCHES "NVHPC")
+  set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -traceback -Kieee -std=gnu99 -gopt")
   set(CMAKE_C_FLAGS_RELEASE "-O2")
   set(CMAKE_C_FLAGS_DEBUG "-O0")
 else()
@@ -132,6 +140,10 @@ set(ICEPACK "${CMAKE_SOURCE_DIR}/../../../icepack")
 
 add_fortran_library(cicelib mod STATIC)
 target_compile_definitions(cicelib PRIVATE FORTRANUNDERSCORE)
+if(CMAKE_Fortran_COMPILER_ID MATCHES "NVHPC")
+  # nvfortran has no quad precision reals
+  target_compile_definitions(cicelib PRIVATE NO_R16)
+endif()
 target_link_libraries(cicelib PUBLIC MPI::MPI_Fortran)
 
 if(CICE_IO MATCHES "^(NetCDF|PIO)$")
@@ -324,9 +336,12 @@ if(CICE_ACCESS3)
   # way of handling them in CMake
   target_include_directories(cicelib PUBLIC "$<INSTALL_INTERFACE:${CMAKE_INSTALL_MODULEDIR}/cicelib>")
   get_target_property(cice_moddir cicelib Fortran_MODULE_DIRECTORY)
-  install(FILES ${cice_moddir}/ice_comp_nuopc.mod
+    # nvfortran .mod files are not self-contained: using a module also needs
+    # the .mod files of every module it uses, so install them all
+  install(DIRECTORY ${cice_moddir}/
     DESTINATION ${CMAKE_INSTALL_MODULEDIR}/cicelib
     COMPONENT AccessCICECmeps_Development
+    FILES_MATCHING PATTERN "*.mod"
   )
   install(EXPORT CicelibTargets
     FILE CicelibTargets.cmake
