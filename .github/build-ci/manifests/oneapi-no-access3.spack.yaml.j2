@@ -1,0 +1,21 @@
+spack:
+  specs:
+    - access-cice @git.{{ ref }} ~access3 io_type=PIO +openmp
+    - access-cice @git.{{ ref }} ~access3 io_type=PIO
+    - access-cice @git.{{ ref }} ~access3 io_type=NetCDF
+    - access-cice @git.{{ ref }} ~access3 io_type=Binary
+  packages:
+    gcc-runtime:
+      require:
+      - '%access_gcc'
+      - target={{ target }}
+    intel-oneapi-compilers:
+      require:
+      - '@{{ oneapi_compiler_version }}'
+    all:
+      require:
+        - '%access_oneapi'
+        - target={{ target }}
+  concretizer:
+    unify: false
+  view: false

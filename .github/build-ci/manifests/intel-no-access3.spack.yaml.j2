@@ -1,0 +1,16 @@
+spack:
+  specs:
+  - access-cice @git.{{ ref }} ~access3 io_type=PIO
+  - access-cice @git.{{ ref }} ~access3 io_type=NetCDF
+  - access-cice @git.{{ ref }} ~access3 io_type=Binary
+  packages:
+    intel-oneapi-compilers-classic:
+      require:
+      - '@{{ intel_compiler_version }}'
+    all:
+      require:
+      - '%access_intel'
+      - target={{ target }}
+  concretizer:
+    unify: false
+  view: false
