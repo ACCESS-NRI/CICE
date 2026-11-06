@@ -155,6 +155,11 @@
          save_ghte_ghtn, & ! flag for saving global hte and htn during initialization
          scale_dxdy        ! flag to apply scale factor to vary dx/dy in rectgrid
 
+      real (kind=dbl_kind), public :: &
+         thickness_ocn_layer1 ! thickness of the first ocean level used with calc_dragio (m),
+                              ! if <= 0 it is set by the bathymetry setup
+                              ! (see bathymetry_format) or left at the Icepack default
+
       logical (kind=log_kind), dimension (:,:,:), allocatable, public :: &
          tmask  , & ! land/boundary mask, thickness (T-cell)
          umask  , & ! land/boundary mask  (U-cell) (1 if all surrounding T cells are ocean)
@@ -5648,7 +5653,8 @@
          enddo
 
          ! For consistency, set thickness_ocn_layer1 in Icepack if 'calc_dragio' is active
-         if (calc_dragio) then
+         ! and it was not set in the namelist
+         if (calc_dragio .and. thickness_ocn_layer1 <= c0) then
             call icepack_init_parameters(thickness_ocn_layer1_in=thick(1))
             call icepack_warnings_flush(nu_diag)
             if (icepack_warnings_aborted()) call abort_ice(error_message=subname, &
@@ -5752,8 +5758,9 @@
       enddo
 
       ! For consistency, set thickness_ocn_layer1 in Icepack if 'calc_dragio' is active
+      ! and it was not set in the namelist
       call icepack_query_parameters(calc_dragio_out=calc_dragio)
-      if (calc_dragio) then
+      if (calc_dragio .and. thickness_ocn_layer1 <= c0) then
          call icepack_init_parameters(thickness_ocn_layer1_in=thick(1))
       endif
       call icepack_warnings_flush(nu_diag)
