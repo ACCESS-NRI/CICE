@@ -2120,7 +2120,7 @@
       endif
       dxN(:,:,:) = HTN(:,:,:)
       call scatter_global(dxE, G_dxE, master_task, distrb_info, &
-                           field_loc_center, field_type_scalar)
+                           field_loc_Eface, field_type_scalar)
       call ice_HaloExtrapolate(dxE, distrb_info, &
                                ew_boundary_type, ns_boundary_type)
       call scatter_global(dxU, G_dxU, master_task, distrb_info, &
@@ -2217,7 +2217,7 @@
       call ice_HaloExtrapolate(dyN, distrb_info, &
                                ew_boundary_type, ns_boundary_type)
       call scatter_global(HTE, G_dyE, master_task, distrb_info, &
-            field_loc_center, field_type_scalar)
+            field_loc_Eface, field_type_scalar)
       call ice_HaloExtrapolate(HTE, distrb_info, &
                                ew_boundary_type, ns_boundary_type)
       if (save_ghte_ghtn) then
@@ -3171,7 +3171,7 @@
          enddo
       endif
       call scatter_global(dxE, work_g2, master_task, distrb_info, &
-                          field_loc_center, field_type_scalar)
+                          field_loc_Eface, field_type_scalar)
       call ice_HaloExtrapolate(dxE, distrb_info, &
                                ew_boundary_type, ns_boundary_type)
 
@@ -3282,7 +3282,7 @@
          endif
       endif
       call scatter_global(dyN, work_g2, master_task, distrb_info, &
-                          field_loc_center, field_type_scalar)
+                          field_loc_Nface, field_type_scalar)
       call ice_HaloExtrapolate(dyN, distrb_info, &
                                ew_boundary_type, ns_boundary_type)
 
