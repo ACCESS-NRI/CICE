@@ -400,10 +400,15 @@
    integer (int_kind), parameter :: &
       max_work_unit=10    ! quantize the work into values from 1,max
 
+   logical (log_kind), dimension (:,:), allocatable :: &
+      lkeepC               ! C/CD: point where a T, U, N or E mask can be active
+
+   logical (log_kind) :: &
+      lcgrid               ! grid_ice is C or CD
+
    integer (int_kind) :: &
       i,j,n              ,&! dummy loop indices
       ig,jg              ,&! global indices
-      igm1,igp1,jgm1,jgp1,&! global indices
       ninfo              ,&! ice_distributionGet check
       np, nlb, m         ,&! debug blocks temporaries
 #ifdef USE_NETCDF
@@ -450,6 +455,14 @@
 
    if (distribution_wght == 'blockall' ) landblockelim = .false.
    if (distribution_wght == 'blockfull') landblockelim = .false.
+
+   ! With C/CD, keep blocks that own any point where the T, U, N or E
+   ! masks can be active, including points next to a tripole fold
+   lcgrid = (grid_ice == 'C' .or. grid_ice == 'CD')
+   if (lcgrid) then
+      allocate(lkeepC(nx_global,ny_global))
+      call cgrid_keep_points(KMTG, puny, lkeepC)
+   endif
 
    allocate(nocn(nblocks_tot))
 
@@ -503,6 +516,9 @@
                            nocn(n) = max(nocn(n),1)
                         endif
                      endif
+                     if (lcgrid) then
+                        if (lkeepC(ig,jg)) nocn(n) = max(nocn(n),1)
+                     endif
                   endif
                end do
             endif
@@ -519,18 +535,10 @@
                do i=this_block%ilo,this_block%ihi
                   ig = this_block%i_glob(i)
                   if (ig > 0) then
-                     if (grid_ice == 'C' .or. grid_ice == 'CD') then
-                        ! Have to be careful about block elimination with C/CD
-                        ! Use a bigger stencil
-                        igm1 = mod(ig-2+nx_global,nx_global)+1
-                        igp1 = mod(ig,nx_global)+1
-                        jgm1 = max(jg-1,1)
-                        jgp1 = min(jg+1,ny_global)
-                        if ((KMTG(ig  ,jg  ) > puny .or.                             &
-                             KMTG(igm1,jg  ) > puny .or. KMTG(igp1,jg  ) > puny .or. &
-                             KMTG(ig  ,jgp1) > puny .or. KMTG(ig  ,jgm1) > puny) .and. &
-                            (ULATG(ig,jg) < shlat/rad_to_deg .or.          &
-                             ULATG(ig,jg) > nhlat/rad_to_deg) )            &
+                     if (lcgrid) then
+                        if (lkeepC(ig,jg) .and.                           &
+                           (ULATG(ig,jg) < shlat/rad_to_deg .or.          &
+                            ULATG(ig,jg) > nhlat/rad_to_deg) )            &
                              nocn(n) = nocn(n) + flat(ig,jg)
                      else
                         if (KMTG(ig,jg) > puny .and.                      &
@@ -581,6 +589,7 @@
       write(nu_diag,'(2a,3i9)')  subname,' work_per_block = ',minval(work_per_block),maxval(work_per_block),sum(work_per_block)
    endif
    deallocate(nocn)
+   if (allocated(lkeepC)) deallocate(lkeepC)
 
 
 !----------------------------------------------------------------------
@@ -731,6 +740,84 @@
 !----------------------------------------------------------------------
 
  end subroutine init_domain_distribution
+
+!***********************************************************************
+
+ subroutine cgrid_keep_points(KMTG, puny, lkeep)
+
+!  For C/CD grids, flag the global points a block must keep for land
+!  block elimination not to change answers: points where the T, U, N or
+!  E masks can be active, and points next to ocean (the halo of an
+!  ocean point).  Across a tripole fold, the neighbour to the north is
+!  the mirrored point on the other side of the fold, as in scatter_global.
+!
+!  T mask: the T cell is ocean.
+!  U mask (umaskCD): at least two of the four surrounding T cells are ocean.
+!  E, N masks: both adjacent T cells are ocean, so covered by the T mask.
+
+   use ice_domain_size, only: nx_global, ny_global
+
+   real (dbl_kind), dimension(nx_global,ny_global), intent(in) :: &
+      KMTG             ! global topography
+
+   real (dbl_kind), intent(in) :: &
+      puny             ! puny limit
+
+   logical (log_kind), dimension(nx_global,ny_global), intent(out) :: &
+      lkeep            ! point must be kept
+
+   ! local variables
+
+   logical (log_kind), dimension(:,:), allocatable :: &
+      ocn              ! T cell is ocean, with one ghost cell all round
+
+   integer (int_kind) :: &
+      i, j           , &! global indices
+      isrc, jsrc     , &! source point across the tripole fold
+      nocnU             ! number of ocean T cells around a U point
+
+   allocate(ocn(0:nx_global+1,0:ny_global+1))
+   ocn = .false.
+   ocn(1:nx_global,1:ny_global) = (KMTG > puny)
+
+   ! north and south: mirror across a tripole fold, otherwise repeat the
+   ! edge row (as the previous stencil did with min/max)
+   ocn(1:nx_global,0) = ocn(1:nx_global,1)
+   if (trim(ns_boundary_type) == 'tripole' .or. &
+       trim(ns_boundary_type) == 'tripoleT') then
+      do i = 1, nx_global
+         if (trim(ns_boundary_type) == 'tripole') then
+            isrc = nx_global + 1 - i
+            jsrc = ny_global
+         else
+            isrc = nx_global + 2 - i
+            jsrc = ny_global - 1
+         endif
+         if (isrc > nx_global) isrc = isrc - nx_global
+         ocn(i,ny_global+1) = ocn(isrc,jsrc)
+      enddo
+   else
+      ocn(1:nx_global,ny_global+1) = ocn(1:nx_global,ny_global)
+   endif
+
+   ! east and west: periodic (as the previous stencil)
+   ocn(0          ,:) = ocn(nx_global,:)
+   ocn(nx_global+1,:) = ocn(1        ,:)
+
+   do j = 1, ny_global
+   do i = 1, nx_global
+      nocnU = count( (/ ocn(i,j  ), ocn(i+1,j  ), &
+                        ocn(i,j+1), ocn(i+1,j+1) /) )
+      lkeep(i,j) = ocn(i,j)                        &  ! T mask
+              .or. nocnU >= 2                      &  ! U mask (umaskCD)
+              .or. ocn(i-1,j) .or. ocn(i+1,j)      &  ! next to ocean
+              .or. ocn(i,j-1) .or. ocn(i,j+1)
+   enddo
+   enddo
+
+   deallocate(ocn)
+
+ end subroutine cgrid_keep_points
 
 !***********************************************************************
 
