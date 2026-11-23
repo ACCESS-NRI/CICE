@@ -2986,21 +2986,21 @@
       if (icepack_warnings_aborted()) call abort_ice(error_message=subname, &
          file=__FILE__, line=__LINE__)
 
- 1000    format (a20,1x,f13.6,1x,a) ! float
- 1002    format (a20,5x,f9.2,1x,a)
- 1003    format (a20,1x,g13.4,1x,a)
- 1004    format (a20,1x,2g13.4,1x,a)
- 1009    format (a20,1x,d13.6,1x,a)
- 1010    format (a20,8x,l6,1x,a)  ! logical
- 1011    format (a20,1x,l6)
- 1013    format (a20,1x,6l3)
- 1020    format (a20,8x,i6,1x,a)  ! integer
- 1021    format (a20,1x,i6)
- 1022    format (a20,1x,i12)
- 1023    format (a20,1x,6i6)
- 1030    format (a20,a14,1x,a)    ! character
- 1031    format (a20,1x,a,a)
- 1033    format (a20,1x,6a6)
+ 1000    format (a25,1x,f13.6,1x,a) ! float
+ 1002    format (a25,5x,f9.2,1x,a)
+ 1003    format (a25,1x,g13.4,1x,a)
+ 1004    format (a25,1x,2g13.4,1x,a)
+ 1009    format (a25,1x,d13.6,1x,a)
+ 1010    format (a25,8x,l6,1x,a)  ! logical
+ 1011    format (a25,1x,l6)
+ 1013    format (a25,1x,6l3)
+ 1020    format (a25,8x,i6,1x,a)  ! integer
+ 1021    format (a25,1x,i6)
+ 1022    format (a25,1x,i12)
+ 1023    format (a25,1x,6i6)
+ 1030    format (a25,a14,1x,a)    ! character
+ 1031    format (a25,1x,a,a)
+ 1033    format (a25,1x,6a6)
  1039    format (a,1x,a,1x,a,1x,a)
 
       end subroutine input_data
