@@ -454,7 +454,7 @@
       e_yieldcurve = 2.0_dbl_kind  ! VP aspect ratio of elliptical yield curve
       e_plasticpot = 2.0_dbl_kind  ! VP aspect ratio of elliptical plastic potential
       visc_method = 'avg_zeta' ! calc viscosities at U point: avg_strength, avg_zeta
-      cgrid_evp_halo = 'standard' ! C grid EVP subcycle halo updates: standard, recompute
+      cgrid_evp_halo = 'recompute' ! C grid EVP subcycle halo updates: recompute, standard
       deltaminEVP = 1e-11_dbl_kind ! minimum delta for viscosities (EVP, Hunke 2001)
       deltaminVP  = 2e-9_dbl_kind  ! minimum delta for viscosities (VP, Hibler 1979)
       capping_method  = 'max'  ! method for capping of viscosities (max=Hibler 1979,sum=Kreyscher2000)
