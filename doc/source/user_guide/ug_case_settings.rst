@@ -687,12 +687,6 @@ snow_nml
 forcing_nml
 ~~~~~~~~~~~~~~~~~~~~~~~~~
 
-..
-   commented out
-   "``calc_dragio``", "logical", "compute dragio from iceruf_ocean and thickness of first ocean level, not supported", "``.false.``"
-   "``iceruf_ocn``", "real", "under ice roughness in meters, not supported", "0.03"
-   commented out
-
 .. csv-table:: **forcing_nml namelist options**
    :header: "variable", "options/format", "description", "default value"
    :widths: 15, 15, 30, 15 
@@ -719,6 +713,7 @@ forcing_nml
    "", "``default``", "constant values defined in the code", ""
    "", "``hycom``", "HYCOM ocean forcing data in netCDF format", ""
    "", "``ncar``", "POP ocean forcing data", ""
+   "``calc_dragio``", "logical", "compute dragio from iceruf_ocn and thickness of first ocean level", "``.false.``"
    "``calc_strair``", "``.false.``", "read wind stress and speed from files", "``.true.``"
    "", "``.true.``", "calculate wind stress and speed", ""
    "``calc_Tsfc``", "logical", "calculate surface temperature", "``.true.``"
@@ -758,6 +753,7 @@ forcing_nml
    "", "``uniform``", "ice defined at all grid points", ""
    "``ice_ref_salinity``", "real", "sea ice salinity for coupling fluxes (ppt)", "4.0"
    "``iceruf``", "real", "ice surface roughness at atmosphere interface in meters", "0.0005"
+   "``iceruf_ocn``", "real", "under ice roughness in meters, used with ``calc_dragio``", "0.03"
    "``l_mpond_fresh``", "logical", "retain (topo) pond water until ponds drain", "``.false.``"
    "``natmiter``", "integer", "number of atmo boundary layer iterations", "5"
    "``nfreq``", "integer", "number of frequencies in ocean surface wave spectral forcing", "25"
@@ -802,6 +798,7 @@ forcing_nml
    "", "``linear_salt``", "linear function of salinity (ktherm=1)",
    "", "``minus1p8``", "constant ocean freezing temperature (:math:`-1.8^{\circ} C`)", ""
    "", "``mushy``", "matches mushy-layer thermo (ktherm=2)", ""
+   "``thickness_ocn_layer1``", "real", "thickness of the first ocean level in meters used with ``calc_dragio``, if <= 0 it is set by the bathymetry setup (see ``bathymetry_format``) or left at the Icepack default", "0.0"
    "``trestore``", "real", "sst restoring time scale (days)", "90."
    "``ustar_min``", "real", "minimum value of ocean friction velocity in m/s", "0.0005"
    "``update_ocn_f``", "``.false.``", "do not include frazil water/salt fluxes in ocn fluxes", "``.false.``"

@@ -155,6 +155,11 @@
          save_ghte_ghtn, & ! flag for saving global hte and htn during initialization
          scale_dxdy        ! flag to apply scale factor to vary dx/dy in rectgrid
 
+      real (kind=dbl_kind), public :: &
+         thickness_ocn_layer1 ! thickness of the first ocean level used with calc_dragio (m),
+                              ! if <= 0 it is set by the bathymetry setup
+                              ! (see bathymetry_format) or left at the Icepack default
+
       logical (kind=log_kind), dimension (:,:,:), allocatable, public :: &
          tmask  , & ! land/boundary mask, thickness (T-cell)
          umask  , & ! land/boundary mask  (U-cell) (1 if all surrounding T cells are ocean)
@@ -2120,7 +2125,7 @@
       endif
       dxN(:,:,:) = HTN(:,:,:)
       call scatter_global(dxE, G_dxE, master_task, distrb_info, &
-                           field_loc_center, field_type_scalar)
+                           field_loc_Eface, field_type_scalar)
       call ice_HaloExtrapolate(dxE, distrb_info, &
                                ew_boundary_type, ns_boundary_type)
       call scatter_global(dxU, G_dxU, master_task, distrb_info, &
@@ -2217,7 +2222,7 @@
       call ice_HaloExtrapolate(dyN, distrb_info, &
                                ew_boundary_type, ns_boundary_type)
       call scatter_global(HTE, G_dyE, master_task, distrb_info, &
-            field_loc_center, field_type_scalar)
+            field_loc_Eface, field_type_scalar)
       call ice_HaloExtrapolate(HTE, distrb_info, &
                                ew_boundary_type, ns_boundary_type)
       if (save_ghte_ghtn) then
@@ -3171,7 +3176,7 @@
          enddo
       endif
       call scatter_global(dxE, work_g2, master_task, distrb_info, &
-                          field_loc_center, field_type_scalar)
+                          field_loc_Eface, field_type_scalar)
       call ice_HaloExtrapolate(dxE, distrb_info, &
                                ew_boundary_type, ns_boundary_type)
 
@@ -3282,7 +3287,7 @@
          endif
       endif
       call scatter_global(dyN, work_g2, master_task, distrb_info, &
-                          field_loc_center, field_type_scalar)
+                          field_loc_Nface, field_type_scalar)
       call ice_HaloExtrapolate(dyN, distrb_info, &
                                ew_boundary_type, ns_boundary_type)
 
@@ -5697,7 +5702,8 @@
          enddo
 
          ! For consistency, set thickness_ocn_layer1 in Icepack if 'calc_dragio' is active
-         if (calc_dragio) then
+         ! and it was not set in the namelist
+         if (calc_dragio .and. thickness_ocn_layer1 <= c0) then
             call icepack_init_parameters(thickness_ocn_layer1_in=thick(1))
             call icepack_warnings_flush(nu_diag)
             if (icepack_warnings_aborted()) call abort_ice(error_message=subname, &
@@ -5801,8 +5807,9 @@
       enddo
 
       ! For consistency, set thickness_ocn_layer1 in Icepack if 'calc_dragio' is active
+      ! and it was not set in the namelist
       call icepack_query_parameters(calc_dragio_out=calc_dragio)
-      if (calc_dragio) then
+      if (calc_dragio .and. thickness_ocn_layer1 <= c0) then
          call icepack_init_parameters(thickness_ocn_layer1_in=thick(1))
       endif
       call icepack_warnings_flush(nu_diag)
