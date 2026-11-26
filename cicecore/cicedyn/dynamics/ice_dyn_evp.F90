@@ -967,9 +967,17 @@
 
          if (evp_recompute) then
 
-            call evp_subcycle_C_recompute (icellT, indxTi, indxTj, &
-                                           icellE, indxEi, indxEj, &
-                                           icellN, indxNi, indxNj)
+            if (maskhalo_dyn) then
+               call evp_subcycle_C_recompute (icellT, indxTi, indxTj, &
+                                              icellE, indxEi, indxEj, &
+                                              icellN, indxNi, indxNj, &
+                                              halo_info_mask)
+            else
+               call evp_subcycle_C_recompute (icellT, indxTi, indxTj, &
+                                              icellE, indxEi, indxEj, &
+                                              icellN, indxNi, indxNj, &
+                                              halo_info)
+            endif
 
          else
 
@@ -1496,7 +1504,9 @@
 ! updates, which send no messages on tasks away from the seam.  Ghost
 ! cells are computed with the same routines as the physical cells, and
 ! only where a halo update would set them, so results are bit for bit
-! identical to the standard subcycle.  The unmasked halo is used.
+! identical to the standard subcycle.  With maskhalo_dyn, the halo
+! updates in the subcycle use the masked halo, as in the standard
+! subcycle.
 
       subroutine init_evp_recompute
 
@@ -1566,10 +1576,11 @@
 
       subroutine evp_subcycle_C_recompute (icellT, indxTi, indxTj, &
                                            icellE, indxEi, indxEj, &
-                                           icellN, indxNi, indxNj)
+                                           icellN, indxNi, indxNj, &
+                                           halo_sub)
 
       use ice_blocks, only: block, get_block, nx_block, ny_block
-      use ice_boundary, only: ice_HaloUpdate, ice_HaloUpdate_multi
+      use ice_boundary, only: ice_HaloUpdate, ice_HaloUpdate_multi, ice_halo
       use ice_domain, only: nblocks, blocks_ice, halo_info
       use ice_domain_size, only: max_blocks
       use ice_flux, only: strintxE, strintyN, taubxE, taubyN, fmE, fmN, TbE, TbN, &
@@ -1595,6 +1606,9 @@
          indxEj   , & ! compressed index in j-direction
          indxNi   , & ! compressed index in i-direction
          indxNj       ! compressed index in j-direction
+
+      type (ice_halo), intent(in) :: &
+         halo_sub     ! halo for the updates inside the subcycle
 
       ! local variables
 
@@ -1678,7 +1692,7 @@
 
          ! tripole fold only
          call ice_timer_start(timer_bound)
-         call ice_HaloUpdate (shearU,             halo_info,         &
+         call ice_HaloUpdate (shearU,             halo_sub,         &
                               field_loc_NEcorner, field_type_scalar, &
                               tripoleOnly=.true.)
          call ice_timer_stop(timer_bound)
@@ -1701,7 +1715,7 @@
          !$OMP END PARALLEL DO
 
          call ice_timer_start(timer_bound)
-         call ice_HaloUpdate_multi (halo_info, &
+         call ice_HaloUpdate_multi (halo_sub, &
               (/ field_loc_center, field_loc_center, field_loc_center, field_loc_center /), &
               (/ field_type_scalar, field_type_scalar, field_type_scalar, field_type_scalar /), &
               zetax2T, etax2T, stresspT, stressmT)
@@ -1729,7 +1743,7 @@
 
          ! tripole fold only
          call ice_timer_start(timer_bound)
-         call ice_HaloUpdate (stress12U,          halo_info,         &
+         call ice_HaloUpdate (stress12U,          halo_sub,         &
                               field_loc_NEcorner, field_type_scalar, &
                               tripoleOnly=.true.)
          call ice_timer_stop(timer_bound)
@@ -1788,7 +1802,7 @@
          !$OMP END PARALLEL DO
 
          call ice_timer_start(timer_bound)
-         call ice_HaloUpdate_multi (halo_info, &
+         call ice_HaloUpdate_multi (halo_sub, &
               (/ field_loc_Eface, field_loc_Nface /), &
               (/ field_type_vector, field_type_vector /), &
               uvelE, vvelN)
@@ -1805,7 +1819,7 @@
          vvel(:,:,:) = vvel(:,:,:)*uvm(:,:,:)
 
          call ice_timer_start(timer_bound)
-         call ice_HaloUpdate_multi (halo_info, &
+         call ice_HaloUpdate_multi (halo_sub, &
               (/ field_loc_Nface, field_loc_Eface, field_loc_NEcorner, field_loc_NEcorner /), &
               (/ field_type_vector, field_type_vector, field_type_vector, field_type_vector /), &
               uvelN, vvelE, uvel, vvel)

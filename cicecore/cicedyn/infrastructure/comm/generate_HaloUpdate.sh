@@ -1069,17 +1069,8 @@ cat <<EOFM > ${file}
    nz = nfld
    nt = 1
 
-   !*** the tripole buffer is only read back through local copies with
-   !*** srcBlock < 0; tasks without such copies skip all tripole work
-   ltripole = .false.
-   if (nxGlobal_size > 0) then
-      do nmsg=1,halo%numLocalCopies
-         if (halo%srcLocalAddr(3,nmsg) < 0) then
-            ltripole = .true.
-            exit
-         endif
-      end do
-   endif
+   !*** only tasks that use the tripole buffer do tripole work
+   ltripole = (nxGlobal_size > 0 .and. halo%tripoleActive)
 
    nxGlobal = 0
    if (ltripole) then

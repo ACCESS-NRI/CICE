@@ -2290,6 +2290,8 @@
             endif
             if (grid_ice == 'C' .and. kdyn == 1) then
                write(nu_diag,1030) ' cgrid_evp_halo   = ', trim(cgrid_evp_halo),' : C grid EVP subcycle halo updates'
+            elseif (grid_ice == 'CD' .and. kdyn == 1) then
+               write(nu_diag,1030) ' cgrid_evp_halo   = ', trim(cgrid_evp_halo),' : not used for the CD grid'
             endif
 
             write(nu_diag,1002) ' Ktens            = ', Ktens, ' : tensile strength factor'
