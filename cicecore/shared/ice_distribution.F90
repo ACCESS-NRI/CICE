@@ -2081,6 +2081,8 @@
            tmp1 = ii/nblocksL
            newDistrb%blockLocation(n) = extra + tmp1 + 1
         endif
+      else  ! no work - eliminate block from distribution
+        newDistrb%blockLocation(n) = 0
       endif
    enddo
    enddo
