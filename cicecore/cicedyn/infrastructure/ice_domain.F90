@@ -400,10 +400,12 @@
    integer (int_kind), parameter :: &
       max_work_unit=10    ! quantize the work into values from 1,max
 
+   logical (log_kind), dimension (:,:), allocatable :: &
+      lcompute             ! global point where the model computes
+
    integer (int_kind) :: &
       i,j,n              ,&! dummy loop indices
       ig,jg              ,&! global indices
-      igm1,igp1,jgm1,jgp1,&! global indices
       ninfo              ,&! ice_distributionGet check
       np, nlb, m         ,&! debug blocks temporaries
 #ifdef USE_NETCDF
@@ -451,6 +453,39 @@
    if (distribution_wght == 'blockall' ) landblockelim = .false.
    if (distribution_wght == 'blockfull') landblockelim = .false.
 
+   allocate(lcompute(nx_global,ny_global))
+
+   ! on the B grid, computation is only done on ocean T cells
+   lcompute = KMTG > puny
+
+   ! on the C/CD grid, computation is also done on land T cells next to
+   ! ocean: their corner (U) points can be active, and neighbouring ocean
+   ! cells use their values
+   if (grid_ice == 'C' .or. grid_ice == 'CD') then
+      ! east, west, north and south neighbours inside the global domain
+      lcompute(1:nx_global-1,:) = lcompute(1:nx_global-1,:) .or. KMTG(2:nx_global  ,:) > puny  ! east
+      lcompute(2:nx_global  ,:) = lcompute(2:nx_global  ,:) .or. KMTG(1:nx_global-1,:) > puny  ! west
+      lcompute(:,1:ny_global-1) = lcompute(:,1:ny_global-1) .or. KMTG(:,2:ny_global  ) > puny  ! north
+      lcompute(:,2:ny_global  ) = lcompute(:,2:ny_global  ) .or. KMTG(:,1:ny_global-1) > puny  ! south
+
+      ! east and west neighbours across a cyclic east-west boundary
+      if (trim(ew_boundary_type) == 'cyclic') then
+         lcompute(nx_global,:) = lcompute(nx_global,:) .or. KMTG(1        ,:) > puny
+         lcompute(1        ,:) = lcompute(1        ,:) .or. KMTG(nx_global,:) > puny
+      endif
+
+      ! north neighbour of the top row, the mirrored point across a tripole fold
+      if (trim(ns_boundary_type) == 'tripole') then
+         lcompute(:,ny_global) = lcompute(:,ny_global) &
+                            .or. KMTG(nx_global:1:-1,ny_global) > puny
+      elseif (trim(ns_boundary_type) == 'tripoleT') then
+         lcompute(1,ny_global) = lcompute(1,ny_global) &
+                            .or. KMTG(1,ny_global-1) > puny
+         lcompute(2:nx_global,ny_global) = lcompute(2:nx_global,ny_global) &
+                                      .or. KMTG(nx_global:2:-1,ny_global-1) > puny
+      endif
+   endif
+
    allocate(nocn(nblocks_tot))
 
    if (distribution_wght == 'file') then
@@ -496,12 +531,10 @@
                   if (ig > 0) then
 !                     if (KMTG(ig,jg) > puny) &
 !                        nocn(n) = max(nocn(n),nint(wght(ig,jg)+1.0_dbl_kind))
-                     if (KMTG(ig,jg) > puny) then
-                        if (wght(ig,jg) > 0.00001_dbl_kind) then
-                           nocn(n) = nocn(n)+nint(wght(ig,jg))
-                        else
-                           nocn(n) = max(nocn(n),1)
-                        endif
+                     if (KMTG(ig,jg) > puny .and. wght(ig,jg) > 0.00001_dbl_kind) then
+                        nocn(n) = nocn(n)+nint(wght(ig,jg))
+                     elseif (lcompute(ig,jg)) then
+                        nocn(n) = max(nocn(n),1)
                      endif
                   endif
                end do
@@ -519,25 +552,10 @@
                do i=this_block%ilo,this_block%ihi
                   ig = this_block%i_glob(i)
                   if (ig > 0) then
-                     if (grid_ice == 'C' .or. grid_ice == 'CD') then
-                        ! Have to be careful about block elimination with C/CD
-                        ! Use a bigger stencil
-                        igm1 = mod(ig-2+nx_global,nx_global)+1
-                        igp1 = mod(ig,nx_global)+1
-                        jgm1 = max(jg-1,1)
-                        jgp1 = min(jg+1,ny_global)
-                        if ((KMTG(ig  ,jg  ) > puny .or.                             &
-                             KMTG(igm1,jg  ) > puny .or. KMTG(igp1,jg  ) > puny .or. &
-                             KMTG(ig  ,jgp1) > puny .or. KMTG(ig  ,jgm1) > puny) .and. &
-                            (ULATG(ig,jg) < shlat/rad_to_deg .or.          &
-                             ULATG(ig,jg) > nhlat/rad_to_deg) )            &
-                             nocn(n) = nocn(n) + flat(ig,jg)
-                     else
-                        if (KMTG(ig,jg) > puny .and.                      &
-                           (ULATG(ig,jg) < shlat/rad_to_deg .or.          &
-                            ULATG(ig,jg) > nhlat/rad_to_deg) )            &
-                             nocn(n) = nocn(n) + flat(ig,jg)
-                     endif
+                     if (lcompute(ig,jg) .and.                         &
+                        (ULATG(ig,jg) < shlat/rad_to_deg .or.          &
+                         ULATG(ig,jg) > nhlat/rad_to_deg) )            &
+                          nocn(n) = nocn(n) + flat(ig,jg)
                   endif
                end do
             endif
@@ -581,6 +599,7 @@
       write(nu_diag,'(2a,3i9)')  subname,' work_per_block = ',minval(work_per_block),maxval(work_per_block),sum(work_per_block)
    endif
    deallocate(nocn)
+   deallocate(lcompute)
 
 
 !----------------------------------------------------------------------
@@ -731,6 +750,7 @@
 !----------------------------------------------------------------------
 
  end subroutine init_domain_distribution
+
 
 !***********************************************************************
 
